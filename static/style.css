@@ -1,4 +1,100 @@
+:root {
+    --navy: #102a43;
+    --blue: #3d8dff;
+    --cyan: #6dcbf4;
+    --ink: #111827;
+    --muted: #5b6472;
+    --surface: #f4f7fa;
+    --white: #ffffff;
+}
+
+* { box-sizing: border-box; }
+html { min-height: 100%; }
 body {
-    font-family: system-ui, sans-serif;
-    margin: 2rem;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    color: var(--ink);
+    background: var(--white);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+a { color: inherit; }
+.site-header { border-bottom: 1px solid #e5eaf0; background: rgba(255,255,255,.96); }
+.navbar {
+    width: min(1120px, calc(100% - 40px));
+    min-height: 76px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+}
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--navy); font-size: 1.2rem; font-weight: 800; text-decoration: none; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a { color: var(--muted); font-weight: 650; text-decoration: none; }
+.nav-links a:hover, .nav-links a:focus-visible { color: var(--blue); }
+main { flex: 1; }
+.hero {
+    min-height: calc(100vh - 148px);
+    padding: 84px 20px;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 80% 20%, rgba(109,203,244,.22), transparent 32%), linear-gradient(145deg,#fff 0%,var(--surface) 100%);
+}
+.hero-content { width: min(820px, 100%); text-align: center; }
+.hero-logo { width: 112px; height: 112px; margin-bottom: 18px; }
+.eyebrow { margin: 0 0 14px; color: var(--blue); font-size: .82rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+h1 { margin: 0; color: var(--navy); font-size: clamp(2.5rem,7vw,4.8rem); line-height: 1.02; }
+.tagline { margin: 24px 0 12px; color: var(--ink); font-size: clamp(1.25rem,3vw,1.65rem); font-weight: 700; }
+.description { max-width: 700px; margin: 0 auto; color: var(--muted); font-size: 1.08rem; line-height: 1.75; }
+.cta-button { display: inline-block; margin-top: 32px; padding: 14px 24px; border-radius: 8px; color: var(--white); background: var(--blue); font-weight: 800; text-decoration: none; box-shadow: 0 10px 24px rgba(61,141,255,.25); }
+.cta-button:hover, .cta-button:focus-visible { background: #246fdb; transform: translateY(-1px); }
+.student-name { margin: 24px 0 0; color: var(--muted); font-size: .92rem; }
+.page-heading { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 88px 0; }
+.page-heading h1 { font-size: clamp(2.4rem,6vw,4.4rem); }
+.page-heading > p:last-child { max-width: 680px; color: var(--muted); font-size: 1.15rem; line-height: 1.7; }
+.explore-page { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 64px 0 88px; }
+.explore-page .page-heading { width: auto; padding: 0 0 40px; }
+.filter-form { padding: 24px; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 18px; align-items: end; background: var(--surface); border: 1px solid #e5eaf0; border-radius: 14px; }
+.filter-field { display: flex; flex-direction: column; gap: 8px; }
+.filter-field label { color: var(--navy); font-size: .84rem; font-weight: 800; }
+.filter-field input, .filter-field select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #cbd5df; border-radius: 7px; color: var(--ink); background: var(--white); font: inherit; }
+.filter-field input:focus, .filter-field select:focus { outline: 3px solid rgba(61,141,255,.2); border-color: var(--blue); }
+.filter-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; }
+.filter-button { padding: 12px 20px; border: 0; border-radius: 7px; color: var(--white); background: var(--blue); font: inherit; font-weight: 800; cursor: pointer; }
+.filter-button:hover, .filter-button:focus-visible { background: #246fdb; }
+.clear-link { color: var(--navy); font-weight: 750; }
+.results-heading { margin: 50px 0 22px; display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
+.results-heading h2, .results-heading p { margin: 0; }
+.results-heading h2 { color: var(--navy); font-size: 1.8rem; }
+.results-heading p { color: var(--muted); }
+.game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.game-card { padding: 26px; border: 1px solid #dde4eb; border-radius: 14px; background: var(--white); box-shadow: 0 12px 28px rgba(16,42,67,.08); }
+.game-card-topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.genre-label { color: var(--blue); font-size: .8rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.rating { color: #138a72; font-size: 1.15rem; }
+.game-card h3 { margin: 14px 0 10px; color: var(--navy); font-size: 1.55rem; }
+.game-description { min-height: 52px; margin: 0; color: var(--muted); line-height: 1.6; }
+.game-details { margin: 22px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.game-details div { padding: 10px 12px; background: var(--surface); border-radius: 7px; }
+.game-details dt { color: var(--muted); font-size: .75rem; font-weight: 800; text-transform: uppercase; }
+.game-details dd { margin: 4px 0 0; color: var(--ink); font-weight: 700; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-list span { padding: 6px 9px; border-radius: 999px; color: var(--navy); background: #e7f4fb; font-size: .78rem; font-weight: 700; }
+.empty-results { padding: 54px 24px; border: 1px dashed #b9c5d1; border-radius: 14px; background: var(--surface); text-align: center; }
+.empty-results h2 { margin-top: 0; color: var(--navy); }
+.empty-results p { color: var(--muted); }
+.site-footer { padding: 20px; color: #d8e6f2; background: var(--navy); text-align: center; font-size: .88rem; }
+.site-footer p { margin: 0; }
+@media (max-width: 640px) {
+    .navbar { padding: 14px 0; align-items: flex-start; }
+    .nav-links { flex-direction: column; align-items: flex-end; gap: 8px; }
+    .hero { padding-top: 56px; }
+    .filter-form, .game-grid { grid-template-columns: 1fr; }
+    .results-heading { align-items: flex-start; flex-direction: column; }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+    .filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

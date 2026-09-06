@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Explore Games | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page">
+    <div class="page-heading">
+        <p class="eyebrow">Game Discovery</p>
+        <h1>Explore Games</h1>
+        <p>Search and filter games using the information that matters to you.</p>
+    </div>
+
+    <form class="filter-form" method="get" action="{{ url_for('explore') }}">
+        <div class="filter-field search-field">
+            <label for="query">Search</label>
+            <input
+                id="query"
+                name="query"
+                type="search"
+                value="{{ query }}"
+                placeholder="Title, genre, description, or tag"
+            >
+        </div>
+
+        <div class="filter-field">
+            <label for="genre">Genre</label>
+            <select id="genre" name="genre">
+                <option value="">All genres</option>
+                {% for genre in genres %}
+                <option value="{{ genre }}" {% if genre == selected_genre %}selected{% endif %}>
+                    {{ genre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="mode">Game mode</label>
+            <select id="mode" name="mode">
+                <option value="">All modes</option>
+                {% for mode in modes %}
+                <option value="{{ mode }}" {% if mode == selected_mode %}selected{% endif %}>
+                    {{ mode }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="min_rating">Minimum rating</label>
+            <select id="min_rating" name="min_rating">
+                <option value="">Any rating</option>
+                {% for rating in [80, 85, 90] %}
+                <option value="{{ rating }}" {% if rating == minimum_rating %}selected{% endif %}>
+                    {{ rating }}%+
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button class="filter-button" type="submit">Filter Games</button>
+            <a class="clear-link" href="{{ url_for('explore') }}">Clear Filters</a>
+        </div>
+    </form>
+
+    <div class="results-heading">
+        <h2>Game Results</h2>
+        <p>{{ games|length }} game{% if games|length != 1 %}s{% endif %} found</p>
+    </div>
+
+    {% if games %}
+    <div class="game-grid">
+        {% for game in games %}
+        <article class="game-card">
+            <div class="game-card-topline">
+                <span class="genre-label">{{ game.genre }}</span>
+                <strong class="rating">{{ game.rating }}%</strong>
+            </div>
+            <h3>{{ game.title }}</h3>
+            <p class="game-description">{{ game.description }}</p>
+            <dl class="game-details">
+                <div><dt>Mode</dt><dd>{{ game.mode }}</dd></div>
+                <div><dt>Price</dt><dd>${{ "%.2f"|format(game.price) }}</dd></div>
+                <div><dt>Playtime</dt><dd>{{ game.estimated_playtime }} hours</dd></div>
+                <div><dt>Year</dt><dd>{{ game.release_year }}</dd></div>
+            </dl>
+            <div class="tag-list" aria-label="Game tags">
+                {% for tag in game.tags %}<span>{{ tag }}</span>{% endfor %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-results">
+        <h2>No matching games found</h2>
+        <p>Try removing a filter or using a broader search term.</p>
+        <a class="cta-button" href="{{ url_for('explore') }}">View All Games</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

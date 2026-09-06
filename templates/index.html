@@ -1,11 +1,22 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>IT401 Project</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <h1>It works! right?</h1>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}GameScope | Intelligent Game Discovery{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <img class="hero-logo" src="{{ url_for('static', filename='images/gamescope-logo.svg') }}" alt="GameScope logo">
+        <p class="eyebrow">Intelligent Game Discovery</p>
+        <h1>Discover beyond the obvious.</h1>
+        <p class="tagline">Find games that match what you actually enjoy.</p>
+        <p class="description">
+            GameScope helps PC gamers discover video games using game information,
+            player reviews, and personal preferences. It highlights meaningful
+            strengths, common concerns, and overlooked titles so users can
+            confidently decide what to play or purchase next.
+        </p>
+        <a class="cta-button" href="{{ url_for('explore') }}">Explore Games</a>
+        <p class="student-name">Created by Yousef Malik</p>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title description">
+  <title id="title">GameScope logo</title>
+  <desc id="description">A magnifying glass surrounding a game controller and the letters GS.</desc>
+  <circle cx="70" cy="70" r="53" fill="#102a43" stroke="#6dcbf4" stroke-width="8"/>
+  <path d="M108 108 L143 143" fill="none" stroke="#3d8dff" stroke-width="15" stroke-linecap="round"/>
+  <path d="M45 72 C48 58 59 51 70 51 H84 C96 51 107 58 110 72 L114 90 C116 101 103 106 96 98 L87 88 H67 L58 98 C51 106 38 101 40 90 Z" fill="#ffffff"/>
+  <path d="M55 70 H70 M62.5 62.5 V77.5" stroke="#3d8dff" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="91" cy="68" r="4" fill="#6dcbf4"/>
+  <circle cx="101" cy="78" r="4" fill="#3d8dff"/>
+  <text x="77" y="87" fill="#102a43" font-family="Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle">GS</text>
+</svg>
