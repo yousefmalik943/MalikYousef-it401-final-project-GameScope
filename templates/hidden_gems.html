@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Steam Hidden Gems | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page hidden-gems-page">
+    <div class="page-heading">
+        <p class="eyebrow">Live Web Intelligence</p>
+        <h1>Steam Hidden Gems</h1>
+        <p>
+            Discover highly rated PC games that have not yet reached a large audience.
+            Search metadata from RAWG, compare Steam 250 rankings, and inspect current
+            Steam player reviews in one place.
+        </p>
+    </div>
+
+    <form class="filter-form external-search" method="get" action="{{ url_for('hidden_gems') }}">
+        <div class="filter-field search-field">
+            <label for="query">Game title or keyword</label>
+            <input id="query" name="query" type="search" value="{{ query }}"
+                   maxlength="80" placeholder="For example: Tiny Glade">
+        </div>
+        <div class="filter-field">
+            <label for="genre">Steam genre</label>
+            <select id="genre" name="genre">
+                <option value="">All genres</option>
+                {% for genre in genres %}
+                <option value="{{ genre }}" {% if genre == selected_genre %}selected{% endif %}>{{ genre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="filter-button" type="submit">Find Hidden Gems</button>
+            <a class="clear-link" href="{{ url_for('hidden_gems') }}">Clear Search</a>
+        </div>
+    </form>
+
+    {% if source_errors %}
+    <div class="notice-stack" aria-live="polite">
+        {% for error in source_errors %}
+        <p class="source-notice"><strong>Source notice:</strong> {{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if api_game %}
+    <section class="source-panel" aria-labelledby="rawg-heading">
+        <div>
+            <p class="source-label">API result</p>
+            <h2 id="rawg-heading">{{ api_game.title }}</h2>
+            <p class="source-attribution">Metadata supplied by <a href="{{ api_game.source_url }}" target="_blank" rel="noopener">RAWG</a>.</p>
+        </div>
+        <div class="metadata-layout">
+            {% if api_game.image %}<img src="{{ api_game.image }}" alt="Artwork for {{ api_game.title }}">{% endif %}
+            <dl class="external-details">
+                <div><dt>Released</dt><dd>{{ api_game.released }}</dd></div>
+                <div><dt>RAWG rating</dt><dd>{{ api_game.rating if api_game.rating is not none else 'Unavailable' }}</dd></div>
+                <div><dt>Ratings</dt><dd>{{ "{:,}".format(api_game.ratings_count) }}</dd></div>
+                <div><dt>Metacritic</dt><dd>{{ api_game.metacritic if api_game.metacritic is not none else 'Unavailable' }}</dd></div>
+                <div><dt>Average playtime</dt><dd>{{ api_game.playtime or 'Unknown' }} hours</dd></div>
+                <div><dt>Genres</dt><dd>{{ api_game.genres|join(', ') or 'Unknown' }}</dd></div>
+            </dl>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if steam_data %}
+    <section class="source-panel review-panel" aria-labelledby="reviews-heading">
+        <div class="panel-heading">
+            <div>
+                <p class="source-label">Current player feedback</p>
+                <h2 id="reviews-heading">Steam Reviews</h2>
+            </div>
+            <div class="review-summary">
+                <strong>{{ steam_data.score_description }}</strong>
+                <span>{{ "{:,}".format(steam_data.total_positive) }} positive / {{ "{:,}".format(steam_data.total_reviews) }} total</span>
+            </div>
+        </div>
+        {% if steam_data.reviews %}
+        <div class="review-list">
+            {% for review in steam_data.reviews %}
+            <article class="review-card">
+                <div class="review-meta">
+                    <strong class="{{ 'recommended' if review.recommended else 'not-recommended' }}">
+                        {{ 'Recommended' if review.recommended else 'Not recommended' }}
+                    </strong>
+                    <span>{{ review.playtime_hours }} hours at review</span>
+                    <span>{{ review.helpful_votes }} helpful vote{% if review.helpful_votes != 1 %}s{% endif %}</span>
+                </div>
+                <p>{{ review.text }}</p>
+                {% if review.developer_response %}
+                <div class="developer-response"><strong>Developer response:</strong> {{ review.developer_response }}</div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No written English reviews were returned for this game.</p>
+        {% endif %}
+        <p class="source-attribution"><a href="{{ steam_data.source_url }}" target="_blank" rel="noopener">Read reviews on Steam</a>.</p>
+    </section>
+    {% endif %}
+
+    <div class="results-heading">
+        <div>
+            <h2>Steam 250 Ranking Results</h2>
+            <p class="source-attribution">Live ranking data from <a href="{{ steam250_url }}" target="_blank" rel="noopener">Steam 250</a>.</p>
+        </div>
+        <p>{{ games|length }} game{% if games|length != 1 %}s{% endif %} shown</p>
+    </div>
+
+    {% if games %}
+    <div class="game-grid external-grid">
+        {% for game in games %}
+        <article class="game-card external-card">
+            {% if game.image %}<img class="game-art" src="{{ game.image }}" alt="Steam artwork for {{ game.title }}" loading="lazy">{% endif %}
+            <div class="game-card-topline">
+                <span class="genre-label">#{{ game.rank }} · {{ game.tag }}</span>
+                <strong class="rating">{{ game.approval if game.approval is not none else '?' }}%</strong>
+            </div>
+            <h3>{{ game.title }}</h3>
+            <dl class="game-details">
+                <div><dt>Steam 250 score</dt><dd>{{ game.score }}</dd></div>
+                <div><dt>Reviews</dt><dd>{{ "{:,}".format(game.review_count) }}</dd></div>
+                <div><dt>Price</dt><dd>{{ game.price }}</dd></div>
+                <div><dt>Year</dt><dd>{{ game.year }}</dd></div>
+            </dl>
+            <div class="card-actions">
+                <a class="filter-button button-link" href="{{ url_for('hidden_gems', query=game.title, genre=selected_genre, appid=game.steam_app_id) }}">View Intelligence</a>
+                <a class="clear-link" href="{{ game.steam_url }}" target="_blank" rel="noopener">Steam Store</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-results">
+        <h2>No matching hidden gems found</h2>
+        <p>Try a broader title, a different genre, or clear the filters.</p>
+        <a class="cta-button" href="{{ url_for('hidden_gems') }}">View All Hidden Gems</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
