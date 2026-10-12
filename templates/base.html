@@ -17,9 +17,19 @@
                 <a href="{{ url_for('index') }}">Home</a>
                 <a href="{{ url_for('explore') }}">Local Collection</a>
                 <a href="{{ url_for('hidden_gems') }}">Hidden Gems</a>
+                <a href="{{ url_for('library') }}">Saved Games</a>
             </div>
         </nav>
     </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-stack" role="status" aria-live="polite">
+        {% for category, message in messages %}
+        <p class="flash-message flash-{{ category }}">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
     <main>{% block content %}{% endblock %}</main>
     <footer class="site-footer">
         <p>&copy; 2026 Yousef Malik | GameScope | IT401</p>

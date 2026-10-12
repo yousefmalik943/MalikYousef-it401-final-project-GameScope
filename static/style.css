@@ -34,6 +34,10 @@ a { color: inherit; }
 .nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a { color: var(--muted); font-weight: 650; text-decoration: none; }
 .nav-links a:hover, .nav-links a:focus-visible { color: var(--blue); }
+.flash-stack { width: min(1120px, calc(100% - 40px)); margin: 16px auto 0; display: grid; gap: 8px; }
+.flash-message { margin: 0; padding: 12px 16px; border-radius: 6px; line-height: 1.45; }
+.flash-success { border: 1px solid #a8d9c9; color: #155f4e; background: #edf8f4; }
+.flash-error { border: 1px solid #e5b6b6; color: #8b2929; background: #fff2f1; }
 main { flex: 1; }
 .hero {
     min-height: calc(100vh - 148px);
@@ -115,6 +119,19 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(2.5rem,7vw,4.8rem); line-he
 .external-card { overflow: hidden; }
 .game-art { width: calc(100% + 52px); height: 150px; margin: -26px -26px 22px; object-fit: cover; }
 .card-actions { display: flex; align-items: center; gap: 16px; }
+.library-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+.library-search { display: flex; align-items: end; gap: 12px; flex: 1; }
+.library-search label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+.library-search input { width: min(460px, 100%); min-height: 46px; padding: 10px 12px; border: 1px solid #cbd5df; border-radius: 7px; font: inherit; }
+.saved-source { overflow-wrap: anywhere; color: var(--muted); font-size: .86rem; line-height: 1.5; }
+.saved-source a { color: #246fdb; }
+.saved-record .card-actions form { margin: 0; }
+.text-button { padding: 0; border: 0; color: var(--navy); background: transparent; font: inherit; font-weight: 750; text-decoration: underline; cursor: pointer; }
+.delete-button { color: #a72f2f; }
+.record-form { max-width: 760px; padding: 28px; display: grid; gap: 20px; border: 1px solid #dde4eb; border-radius: 8px; background: var(--white); }
+.record-form .filter-field textarea { width: 100%; min-height: 130px; padding: 12px; border: 1px solid #cbd5df; border-radius: 7px; color: var(--ink); font: inherit; line-height: 1.5; resize: vertical; }
+.record-form .filter-field textarea:focus { outline: 3px solid rgba(61,141,255,.2); border-color: var(--blue); }
+.record-form-page .page-heading { padding-bottom: 32px; }
 .button-link { display: inline-block; color: var(--white); text-decoration: none; }
 .results-heading > div > p { margin-top: 6px; }
 .site-footer { padding: 20px; color: #d8e6f2; background: var(--navy); text-align: center; font-size: .88rem; }
@@ -127,6 +144,9 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(2.5rem,7vw,4.8rem); line-he
     .results-heading { align-items: flex-start; flex-direction: column; }
     .panel-heading { flex-direction: column; }
     .review-summary { align-items: flex-start; }
+    .library-toolbar, .library-search { align-items: stretch; flex-direction: column; }
+    .library-search input { width: 100%; }
+    .record-form { padding: 20px; }
 }
 
 @media (min-width: 641px) and (max-width: 900px) {

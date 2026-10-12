@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Games | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page library-page">
+    <div class="page-heading">
+        <p class="eyebrow">Persistent Collection</p>
+        <h1>Saved Games</h1>
+        <p>Steam 250 discoveries and records you add are stored in the configured database.</p>
+    </div>
+
+    <div class="library-toolbar">
+        <form class="library-search" method="get" action="{{ url_for('library') }}">
+            <label for="query">Search saved records</label>
+            <input id="query" name="query" type="search" value="{{ query }}" maxlength="80"
+                   placeholder="Title, description, or genre">
+            <button class="filter-button" type="submit">Search</button>
+            {% if query %}<a class="clear-link" href="{{ url_for('library') }}">Clear</a>{% endif %}
+        </form>
+        <a class="filter-button button-link" href="{{ url_for('create_record') }}">Add record</a>
+    </div>
+
+    <div class="results-heading">
+        <h2>Database Records</h2>
+        <p>{{ records|length }} record{% if records|length != 1 %}s{% endif %}</p>
+    </div>
+
+    {% if records %}
+    <div class="game-grid">
+        {% for record in records %}
+        <article class="game-card saved-record">
+            <div class="game-card-topline">
+                <span class="genre-label">{{ record.source }}{% if record.rank %} · Rank #{{ record.rank }}{% endif %}</span>
+                {% if record.approval is not none %}<strong class="rating">{{ record.approval }}%</strong>{% endif %}
+            </div>
+            <h3>{{ record.title }}</h3>
+            <p class="game-description">{{ record.description }}</p>
+            <dl class="game-details">
+                <div><dt>Genre</dt><dd>{{ record.tag or 'Not supplied' }}</dd></div>
+                <div><dt>Steam App ID</dt><dd>{{ record.steam_app_id or 'Not supplied' }}</dd></div>
+                <div><dt>Retrieved</dt><dd>{{ record.retrieved_date.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
+                <div><dt>Created</dt><dd>{{ record.created_date.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
+            </dl>
+            <p class="saved-source"><strong>Source:</strong> <a href="{{ record.source_url }}" target="_blank" rel="noopener">{{ record.source_url }}</a></p>
+            <div class="card-actions">
+                <a class="clear-link" href="{{ url_for('edit_record', record_id=record.id) }}">Edit</a>
+                <form method="post" action="{{ url_for('delete_record', record_id=record.id) }}"
+                      onsubmit="return confirm('Delete this saved record?');">
+                    <button class="text-button delete-button" type="submit">Delete</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-results">
+        <h2>No saved game records</h2>
+        <p>Visit Hidden Gems to import the current ranking, or add a record directly.</p>
+        <a class="cta-button" href="{{ url_for('create_record') }}">Add a record</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

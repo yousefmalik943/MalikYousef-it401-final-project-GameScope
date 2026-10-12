@@ -1,16 +1,19 @@
 # GameScope
 
 **Student:** Yousef Malik  
-**Course:** IT401  
-**Assignment:** A2 - Expanding the Web Intelligence Application Using an API
+**Course:** IT401<br>
+**Assignment:** A3 - Database Integration, Persistence, and CRUD
+**Application name:** GameScope
 
 ## Project Overview
 
 GameScope is a Flask web-intelligence application for discovering PC games on
 Steam. It preserves the searchable 24-game local collection created for A1 and
-adds a live Hidden Gems experience. The new interface combines an authenticated
-RAWG API request, structured information scraped from Steam 250, and current
-player reviews from Steam.
+adds a live Hidden Gems experience. A3 adds a persistent SQLAlchemy-backed
+library for information acquired from Steam 250, with web-based create, read,
+update, and delete operations. The interface also combines authenticated RAWG
+metadata, structured information scraped from Steam 250, and current player
+reviews from Steam.
 
 GameScope focuses on games that players rate highly but that have not yet
 reached the review volume of major releases. Users can search by game title or
@@ -32,6 +35,7 @@ every result.
 | `/` | Introduces GameScope and links to both discovery tools | Static application content |
 | `/explore` | Searches and filters the original A1 collection | `data/games.json` |
 | `/hidden-gems` | Displays up to 250 Steam 250 records and enriches a search or selected game | Steam 250, RAWG, and Steam Reviews |
+| `/library` | Searches and manages permanently stored records | MySQL, or local SQLite when MySQL settings are not configured |
 
 ## External Information Sources
 
@@ -96,6 +100,7 @@ User enters a title and/or selects a genre
                     v
 Steam 250 page -> scrape and normalize ranked candidates
                     |
+                    +-> validate and upsert records in SQLAlchemy database
                     +-> filter visible candidates
                     |
 Selected title -> RAWG API -> normalize PC metadata
@@ -103,7 +108,7 @@ Selected title -> RAWG API -> normalize PC metadata
 Selected App ID -> Steam Reviews -> normalize review text and summary
                     |
                     v
-        Combined Hidden Gems interface
+        Combined Hidden Gems interface and Saved Games library
 ```
 
 The local `/explore` route remains separate and continues to read
@@ -112,7 +117,7 @@ The local `/explore` route remains separate and continues to read
 ### Detailed request lifecycle
 
 1. A request to `/hidden-gems` asks the scraper for as many as 250 ranked
-   records.
+  records.
 2. The scraper tries the Steam 250 website first, then Steam 250's official
    generated HTML on GitHub, and finally the saved local snapshot. The interface
    shows a notice whenever the primary source was not used.
@@ -127,8 +132,12 @@ The local `/explore` route remains separate and continues to read
 6. Choosing **View Intelligence** submits the game's numeric Steam App ID. The
    Steam Reviews endpoint returns the current review summary and representative
    English-language review excerpts.
-7. Flask renders the scraped ranking, API metadata, review information,
-   attribution links, and any source-specific warning on one page.
+7. Valid Steam 250 records are inserted or refreshed in the `game_records`
+  table. Stable source URLs and Steam App IDs prevent repeated requests from
+  producing duplicate entries.
+8. Flask renders the scraped ranking, API metadata, review information,
+  attribution links, and any source-specific warning on one page. `/library`
+  reads saved records back from the database for search and CRUD operations.
 
 ### Source priority, caching, and data freshness
 
@@ -142,11 +151,12 @@ Official Steam 250 GitHub mirror
 data/steam250_fallback.json (saved 250-record snapshot)
 ```
 
-A successful scrape is stored in process memory for 900 seconds (15 minutes).
-This reduces traffic to Steam 250 and makes repeated page loads faster. The
-cache is not shared between server processes and is cleared whenever the Flask
-server restarts. RAWG searches and Steam review requests are performed when the
-corresponding user action occurs; they are not written to disk.
+A successful scrape is cached in process memory for 900 seconds (15 minutes) to
+reduce repeated traffic. This cache is not shared between server processes and
+is cleared on restart. Separately, normalized Steam 250 records are stored
+permanently in `game_records`. RAWG searches, Steam review responses, and the
+24-game A1 JSON collection remain request-time or file-backed information and
+are not copied into the database.
 
 ## Information Model
 
@@ -173,10 +183,18 @@ corresponding user action occurs; they are not written to disk.
 - Review: `text`, `recommended`, `helpful_votes`, `comment_count`,
   `playtime_hours`, `developer_response`
 
+### Persistent database record
+
+The `game_records` table stores each managed or acquired record with `id`,
+`title`, `description`, `source`, `source_url`, `retrieved_date`, and
+`created_date`. Optional Steam 250 attributes are `steam_app_id`, `rank`,
+`tag`, `release_year`, `steam250_score`, `review_count`, `approval`, `price`,
+and `image_url`.
+
 Local records are fictional demonstration data stored in the repository.
-Scraped and API records are normally acquired at request time and may change.
-When neither live Steam 250 source is reachable, the clearly labeled local
-snapshot supplies the ranking instead.
+Steam 250 ranking data is acquired at request time and refreshed in the
+database; the ranking snapshot remains a resilience source. RAWG and Steam
+reviews are displayed for the request and are not persisted.
 
 ## Application Architecture
 
@@ -184,27 +202,30 @@ GameScope uses a small Flask service structure so routing, external data access,
 and presentation remain separate:
 
 ```text
-app.py                         Flask application factory and development server
+app.py                         Flask application factory, database setup, and CLI command
 config.py                      Environment variables, URLs, timeouts, and cache settings
-routes/main.py                 Routes, validation, filtering, and service coordination
+routes/main.py                 Discovery routes, filtering, and service coordination
+routes/library.py              Database-backed library CRUD routes and form validation
+models/__init__.py              Flask-SQLAlchemy extension and GameRecord schema
+services/persistence_service.py Maps/upserts acquired Steam 250 records
 services/rawg_service.py       Authenticated RAWG request and JSON normalization
 services/steam250_scraper.py   HTML fetching, parsing, retry, cache, and fallback logic
 services/steam_review_service.py Steam review request and JSON normalization
 services/external_errors.py    Safe application-facing external service errors
 templates/                     Jinja page templates
-static/                        Shared CSS and logo
+static/                        Shared CSS, logo, and report screenshots
 data/games.json                Original 24-game A1 collection
 data/steam250_fallback.json    Saved 250-record resilience snapshot
 scripts/refresh_steam250_snapshot.py Snapshot maintenance command
 tests/test_app.py              Automated route, parser, API, and failure tests
 ```
 
-`app.py` selects a configuration, registers the routes, and starts Flask.
-`routes/main.py` validates query-string input before calling the relevant
-service. Each external service converts its source-specific response into the
-information model documented above and raises `ExternalServiceError` for
-expected failures. The route catches those errors, keeps any unaffected source
-usable, and sends readable notices to the template.
+`app.py` selects a configuration, initializes Flask-SQLAlchemy, registers
+routes, and exposes `flask --app app init-db` for initial table creation.
+`routes/main.py` coordinates discovery and acquired-record persistence;
+`routes/library.py` validates CRUD form input. External services normalize
+their responses, and expected source failures are presented as readable
+notices without preventing unaffected data from being displayed.
 
 ## Environment Variables
 
@@ -212,10 +233,20 @@ usable, and sends readable notices to the template.
 |---|---:|---|
 | `RAWG_API_KEY` | Yes for RAWG search | Private key issued by RAWG |
 | `SECRET_KEY` | Recommended | Flask session/security secret |
+| `DATABASE_URL` | Optional | SQLAlchemy connection URL; use the CI-Keys MySQL URL when supplied |
+| `MYSQL_HOST` | Optional | MySQL server hostname, when not using `DATABASE_URL` |
+| `MYSQL_PORT` | Optional | MySQL port; defaults to `3306` |
+| `MYSQL_USER` | Optional | MySQL username |
+| `MYSQL_PASSWORD` | Optional | MySQL password |
+| `MYSQL_DATABASE` | Optional | Existing MySQL schema/database name |
 | `FLASK_ENV` | No | `development` or `production` |
 
-The real `.env` file is excluded through `.gitignore`. `.env.example` documents
-the names without containing credentials.
+Set either `DATABASE_URL` or the `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`,
+and `MYSQL_DATABASE` values to use MySQL. The application selects the
+`mysql+pymysql` driver for MySQL. If no database settings are present, it uses
+a persistent SQLite file in Flask's instance directory for local development
+and automated tests. The real `.env` file is excluded through `.gitignore`;
+`.env.example` contains variable names only.
 
 ## Installation Instructions
 
@@ -247,15 +278,27 @@ the names without containing credentials.
    ```dotenv
    RAWG_API_KEY=your_private_key_here
    SECRET_KEY=your_random_secret_here
+  DATABASE_URL=mysql+pymysql://username:password@host:3306/database?charset=utf8mb4
    ```
 
-6. Start the application.
+  Use the MySQL connection values provided through CI-Keys. URL-encode special
+  characters in a `DATABASE_URL`, or provide the `MYSQL_*` settings separately.
+  The database/schema must already exist and the account must be allowed to
+  create tables. Leave `DATABASE_URL` empty to use local SQLite instead.
+
+6. Initialize the tables.
+
+  ```bash
+  flask --app app init-db
+  ```
+
+7. Start the application.
 
    ```bash
    python app.py
    ```
 
-7. Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
+8. Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
 
 If PowerShell prevents activation of the virtual environment, the application
 can still be run by addressing its Python executable directly:
@@ -301,6 +344,8 @@ is intentionally applied to the complete ranking.
 | Package | Role |
 |---|---|
 | Flask | Routing, configuration, and Jinja template rendering |
+| Flask-SQLAlchemy | ORM models, database sessions, and SQLAlchemy integration |
+| PyMySQL | MySQL DBAPI driver |
 | Requests | HTTP calls to RAWG, Steam 250, its mirror, and Steam Reviews |
 | Beautiful Soup | Parsing and cleaning the Steam 250 HTML |
 | python-dotenv | Loading private configuration from `.env` |
@@ -341,6 +386,9 @@ key or other secret.
 - Steam 250's official GitHub `gh-pages` mirror as a secondary live HTML source
 - A 250-game attributed Steam 250 snapshot used only when the live source is down
 - Graceful handling of invalid input and external-source failures
+- MySQL persistence for acquired Steam 250 information
+- Searchable saved-record library with create, read, update, and delete actions
+- Required-field, URL, length, and duplicate validation
 - Automated tests that do not require live external services
 
 ## Error Handling
@@ -430,6 +478,190 @@ recorded count.
 - If port 5000 is already occupied, stop the older Flask process before starting
   another instance.
 - After editing `.env`, stop the server with `Ctrl+C` and start it again.
+
+## A3 Documentation
+
+### Project Title
+
+**GameScope: Persistent PC Game Discovery**<br>
+**Application:** GameScope<br>
+**Student:** Yousef Malik<br>
+**Course and assignment:** IT401, A3 - Database Integration, Persistence, and CRUD
+
+### Project Overview
+
+GameScope helps PC players explore a local demonstration catalog and find
+lesser-known Steam games using Steam 250 rankings. It combines web scraping,
+RAWG API metadata, and Steam review information. Its intended users are players
+looking for discovery signals and an administrator or evaluator managing
+research records through the Saved Games page.
+
+### Information Persistence
+
+The application permanently stores Steam 250 Hidden Gems records and records
+created or edited in Saved Games. Persistence keeps acquired ranking
+information available across application restarts and supports review and
+maintenance through CRUD. The A1 collection in `data/games.json`, the
+15-minute scraper cache, RAWG search results, and Steam review responses remain
+file-backed or temporary and are not database records.
+
+### Database Schema
+
+The `game_records` table has no relationships to other tables in this version.
+Each record represents one PC game from Steam 250 or an entry manually managed
+in the library.
+
+| Attribute | Type | Purpose |
+|---|---|---|
+| `id` | Integer, primary key | Stable record identifier |
+| `title` | String(200), required, indexed | Game title and library search field |
+| `description` | Text, required | Summary of the acquired ranking entry or user-provided description |
+| `source` | String(120), required | Origin name, such as Steam 250 |
+| `source_url` | String(500), required, unique | Direct source link and duplicate key |
+| `retrieved_date` | DateTime, required | Most recent acquisition/refresh time |
+| `created_date` | DateTime, required | First database creation time |
+| `steam_app_id` | String(20), optional, unique | Steam identity used to refresh the same game |
+| `rank`, `tag`, `release_year` | Optional ranking fields | Discovery rank and primary classification |
+| `steam250_score`, `review_count`, `approval`, `price`, `image_url` | Optional source attributes | Preserve the useful values acquired from Steam 250 |
+
+There are no foreign-key relationships because each record is self-contained.
+Rank, tag, App ID, score, approval, review count, price, year, and image URL
+are additional fields because they retain useful A2 acquisition attributes
+for filtering and display without introducing another table.
+
+### Application Architecture
+
+`app.py` creates the Flask application, initializes Flask-SQLAlchemy, registers
+routes, and exposes the `init-db` command. `models/__init__.py` defines the
+database extension and model. `routes/main.py` coordinates discovery while
+`routes/library.py` owns library CRUD and form validation. Service modules
+acquire external data; `services/persistence_service.py` maps and upserts the
+Steam 250 records. Jinja templates render pages, and `static/style.css` styles
+them. MySQL is connected through PyMySQL; SQLite is available as a persistent
+local-development fallback.
+
+### Information Flow
+
+1. A browser requests `/hidden-gems` or submits a title/genre filter.
+2. The scraper retrieves Steam 250 HTML, its official mirror, or the saved
+   snapshot, then parses and normalizes usable entries.
+3. The persistence service checks required acquisition values and locates
+   existing entries by source URL or Steam App ID.
+4. SQLAlchemy inserts new records or refreshes existing records and commits
+   them to MySQL (or configured local SQLite).
+5. Flask renders the discovery response. The `/library` route reads records
+   from the database and permits validated create, edit, and delete requests.
+6. RAWG and Steam review responses are requested when needed and rendered for
+   that response only; they are not saved.
+
+### Current Features
+
+- Homepage and searchable/filterable A1 catalog
+- Steam 250 web scraping with mirror, cache, and saved-snapshot fallback
+- RAWG API metadata and Steam review integration
+- MySQL-backed persistence for Steam 250 acquired information
+- Database-backed Saved Games search, create, read, update, and delete
+- Required-field, length, URL-scheme, and duplicate checks
+- External-source attribution and readable service/database error feedback
+
+### Project Structure
+
+| Path | Purpose |
+|---|---|
+| `app.py`, `config.py` | Flask factory, database setup command, environment and source configuration |
+| `models/` | SQLAlchemy model and shared database extension |
+| `routes/` | Discovery and CRUD request handlers |
+| `services/` | API clients, scraper, error types, and persistence mapping |
+| `templates/`, `static/` | Jinja views, styles, logo, and A3 screenshots |
+| `data/` | A1 JSON catalog and Steam 250 fallback snapshot |
+| `scripts/` | Snapshot refresh and A3 PDF generation utilities |
+| `tests/` | Isolated route, validation, persistence, and parser tests |
+
+### Installation Instructions
+
+Clone the repository, create and activate a virtual environment, install
+`requirements.txt`, copy `.env.example` to `.env`, and configure the RAWG key
+and CI-Keys MySQL connection variables. Create the target database/schema and
+grant the account permission to create tables. Then run:
+
+```bash
+flask --app app init-db
+python app.py
+```
+
+Visit `http://127.0.0.1:5000`. Without MySQL environment variables, the local
+configuration uses a persistent SQLite database in Flask's `instance/`
+directory; the MySQL setup is required for the course database deliverable.
+
+### Environment Variables
+
+`RAWG_API_KEY` enables RAWG search; `SECRET_KEY` configures Flask security.
+For MySQL, use either `DATABASE_URL` or `MYSQL_HOST`, `MYSQL_PORT`,
+`MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`. `FLASK_ENV` optionally
+selects development or production behavior. No API key, password, or full
+connection URL belongs in source control or this README.
+
+### Error Handling
+
+- **Invalid input:** required fields, length limits, URL format, and allowed
+  URL schemes are validated before persistence; errors are returned on the form.
+- **Missing API key:** RAWG reports the missing `RAWG_API_KEY`; scraped ranking
+  results remain available.
+- **API/scraper failure:** timeouts, HTTP errors, retries, mirror, and snapshot
+  fallback are handled by the existing services and surfaced as notices.
+- **Duplicates:** the library rejects a repeated source URL; the acquisition
+  service updates a matching source URL or Steam App ID instead of adding a
+  second row.
+- **Database write failure:** failed CRUD commits and acquisition writes are
+  rolled back and reported; live discovery results can still render if only
+  their persistence attempt fails.
+
+### Screenshots
+
+The submission should include captures of the homepage, database-backed Saved
+Games page, CRUD form, and an example persisted record. These screenshots are
+not included in this generated report because a local application server was
+not started for capture. Save the images under `static/images/` and add them to
+this section before final submission; the PDF builder will include referenced
+images in the next report build.
+
+### Design Decisions
+
+- Steam 250 is the persisted A2 dataset because each ranking entry has a stable
+  game identifier and useful acquisition metadata. RAWG and Steam reviews are
+  deliberately request-scoped and may change frequently.
+- One `game_records` table is sufficient for the current single-entity workflow;
+  it avoids an unnecessary relationship or advanced repository layer.
+- Steam ranking attributes are optional columns so records can also be entered
+  manually while preserving required title, description, source, and URL.
+- `source_url` is unique and Steam App ID is also unique when present. Manual
+  duplicates are rejected; repeated acquisition refreshes the existing row.
+- Source descriptions are synthesized from rank, tag, and year because Steam
+  250's listing does not provide a standalone descriptive paragraph.
+
+### Known Limitations
+
+- MySQL must be provisioned separately and its connection settings must be
+  supplied using CI-Keys; the project does not create the MySQL server/schema.
+- `db.create_all()` initializes a new schema but does not migrate existing
+  schemas after model changes; a migration tool may be needed for future updates.
+- Steam 250 markup and ranking data can change, and the saved fallback can be
+  stale. The scraper cache is process-local.
+- The app has no authentication or role-based access control, so CRUD is
+  intended for local/course demonstration rather than public deployment.
+- RAWG matching is approximate, external information needs an internet
+  connection, and the A1 catalog remains a JSON file.
+
+## Generating the A3 PDF
+
+After installing dependencies and adding screenshots, regenerate the report with:
+
+```bash
+python scripts/build_a3_report.py
+```
+
+The generated `Yousef_Malik_A3_Project_Report.pdf` contains the README's A3
+documentation and the referenced screenshots.
 
 ### Hidden Gems shows a source warning
 

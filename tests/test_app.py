@@ -4,6 +4,7 @@ import pytest
 import requests
 
 from app import create_app
+from models import GameRecord, db
 from services.external_errors import ExternalServiceError
 from services.rawg_service import RawgService
 from services.steam250_scraper import Steam250Scraper
@@ -18,13 +19,27 @@ SAMPLE_GEMS = [
 @pytest.fixture()
 def app():
     flask_app = create_app("default")
-    flask_app.config.update(TESTING=True, RAWG_API_KEY="test-key")
+    flask_app.config.update(
+        TESTING=True,
+        RAWG_API_KEY="test-key",
+        SQLALCHEMY_DATABASE_URI="sqlite://",
+    )
+    with flask_app.app_context():
+        db.create_all()
     return flask_app
 
 
 @pytest.fixture()
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def clean_database(app):
+    yield
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
 
 
 def test_homepage_loads(client):
@@ -141,3 +156,103 @@ def test_hidden_gems_handles_external_failure(client, monkeypatch):
     assert response.status_code == 200
     assert b"Source is temporarily unavailable" in response.data
     assert b"No matching hidden gems found" in response.data
+
+
+def test_library_create_read_update_and_delete(client, app):
+    fields = {
+        "title": "Small Strategy",
+        "description": "A thoughtful strategy game.",
+        "source": "Steam 250",
+        "source_url": "https://store.steampowered.com/app/12345/",
+    }
+    response = client.post("/library/new", data=fields, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Small Strategy" in response.data
+
+    with app.app_context():
+        record_id = GameRecord.query.one().id
+    fields["title"] = "Updated Strategy"
+    response = client.post(f"/library/{record_id}/edit", data=fields, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Updated Strategy" in response.data
+
+    response = client.post(f"/library/{record_id}/delete", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"No saved game records" in response.data
+
+
+def test_library_rejects_missing_invalid_and_duplicate_values(client, app):
+    response = client.post("/library/new", data={"title": "Incomplete"})
+    assert response.status_code == 400
+    assert b"Description is required" in response.data
+
+    fields = {
+        "title": "Invalid URL",
+        "description": "Description",
+        "source": "Test",
+        "source_url": "javascript:alert(1)",
+    }
+    response = client.post("/library/new", data=fields)
+    assert response.status_code == 400
+    assert b"valid http or https URL" in response.data
+
+    fields["title"] = "Valid URL"
+    fields["source_url"] = "https://example.test/record"
+    assert client.post("/library/new", data=fields).status_code == 302
+    assert client.post("/library/new", data=fields).status_code == 400
+
+    with app.app_context():
+        assert GameRecord.query.count() == 1
+
+
+def test_hidden_gems_persists_and_deduplicates_scraped_records(client, app, monkeypatch):
+    monkeypatch.setattr(
+        "routes.main.Steam250Scraper.get_hidden_gems",
+        lambda self, limit=50: SAMPLE_GEMS,
+    )
+    client.get("/hidden-gems")
+    client.get("/hidden-gems")
+
+    with app.app_context():
+        records = GameRecord.query.order_by(GameRecord.rank).all()
+        assert len(records) == 2
+        assert records[0].description.startswith("Ranked #1")
+        assert records[0].source == "Steam 250"
+        assert records[0].steam_app_id == "12345"
+
+
+def test_acquired_invalid_records_are_skipped(client, app, monkeypatch):
+    invalid_games = [
+        {**SAMPLE_GEMS[0], "steam_url": "javascript:alert(1)"},
+        {**SAMPLE_GEMS[1], "title": ""},
+    ]
+    monkeypatch.setattr(
+        "routes.main.Steam250Scraper.get_hidden_gems",
+        lambda self, limit=50: invalid_games,
+    )
+    client.get("/hidden-gems")
+
+    with app.app_context():
+        assert GameRecord.query.count() == 0
+
+
+def test_saved_record_survives_new_app_instance(tmp_path):
+    database_path = tmp_path / "persistent.sqlite"
+    database_uri = f"sqlite:///{database_path.as_posix()}"
+    first_app = create_app("default")
+    first_app.config.update(SQLALCHEMY_DATABASE_URI=database_uri)
+    with first_app.app_context():
+        db.create_all()
+        db.session.add(GameRecord(
+            title="Persistent Entry",
+            description="Stored between application instances.",
+            source="Test source",
+            source_url="https://example.test/persistent",
+        ))
+        db.session.commit()
+
+    second_app = create_app("default")
+    second_app.config.update(SQLALCHEMY_DATABASE_URI=database_uri)
+    with second_app.app_context():
+        record = GameRecord.query.one()
+        assert record.title == "Persistent Entry"

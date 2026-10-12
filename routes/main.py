@@ -1,9 +1,13 @@
 import json
 import os
 
-from flask import current_app, render_template, request
+from flask import current_app, flash, render_template, request
+from sqlalchemy.exc import SQLAlchemyError
 
+from models import db
+from routes.library import register_library_routes
 from services.external_errors import ExternalServiceError
+from services.persistence_service import persist_steam250_games
 from services.rawg_service import RawgService
 from services.steam250_scraper import Steam250Scraper
 from services.steam_review_service import SteamReviewService
@@ -103,6 +107,13 @@ def register_routes(app):
         )
         try:
             games = scraper.get_hidden_gems(limit=250)
+            try:
+                saved_count = persist_steam250_games(games)
+                if saved_count:
+                    flash(f"Updated {saved_count} Steam 250 records in the database.", "success")
+            except SQLAlchemyError:
+                db.session.rollback()
+                flash("Steam 250 is available, but its records could not be saved to the database.", "error")
             if scraper.used_mirror:
                 source_errors.append(
                     "The main Steam 250 hostname is temporarily unavailable. "
@@ -166,3 +177,5 @@ def register_routes(app):
             source_errors=source_errors,
             steam250_url=current_app.config["STEAM250_URL"],
         )
+
+    register_library_routes(app)
