@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Search Database | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page search-page">
+    <div class="page-heading">
+        <p class="eyebrow">Database Retrieval</p>
+        <h1>Search GameScope</h1>
+        <p>Find saved game intelligence by title or description, then narrow and sort the matches.</p>
+    </div>
+
+    <form class="filter-form search-filter-form" method="get" action="{{ url_for('search') }}">
+        <div class="filter-field search-query-field">
+            <label for="search-query">Keyword or phrase</label>
+            <input id="search-query" type="search" name="q" value="{{ original_query if original_query is defined else query }}"
+                   maxlength="120" placeholder="Try a game title, genre, or feature" autocomplete="off">
+        </div>
+        <div class="filter-field">
+            <label for="search-source">Source</label>
+            <select id="search-source" name="source">
+                <option value="">All sources</option>
+                {% for source in sources %}<option value="{{ source }}" {% if source == source_filter %}selected{% endif %}>{{ source }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="search-tag">Genre</label>
+            <select id="search-tag" name="tag">
+                <option value="">All genres</option>
+                {% for tag in tags %}<option value="{{ tag }}" {% if tag == tag_filter %}selected{% endif %}>{{ tag }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="search-sort">Sort results</label>
+            <select id="search-sort" name="sort">
+                {% for value, label in sort_options.items() %}<option value="{{ value }}" {% if value == sort_by %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="filter-button" type="submit">Search games</button>
+            {% if searched %}<a class="clear-link" href="{{ url_for('search') }}">New search</a>{% endif %}
+            <a class="clear-link telemetry-link" href="{{ url_for('search_history') }}">Search activity</a>
+        </div>
+    </form>
+
+    {% for error in errors %}<p class="search-message search-warning" role="status">{{ error }}</p>{% endfor %}
+
+    {% if not searched or not query %}
+    <div class="empty-results search-empty">
+        <h2>Enter a keyword to begin</h2>
+        <p>Search runs against saved database records; no external source is queried.</p>
+    </div>
+    {% elif records %}
+    <div class="results-heading search-results-heading">
+        <div>
+            <h2>{{ total }} result{% if total != 1 %}s{% endif %} for “{{ query }}”</h2>
+            <p>Showing {{ start }}–{{ end }} · Page {{ page }} of {{ page_count }}</p>
+        </div>
+        <p>Sorted by {{ sort_options[sort_by]|lower }}</p>
+    </div>
+
+    <div class="search-result-list">
+        {% for record in records %}
+        <article class="search-result">
+            <div class="search-result-main">
+                <p class="search-result-meta">{{ record.source }}{% if record.tag %} · {{ record.tag }}{% endif %}{% if record.rank %} · Steam 250 #{{ record.rank }}{% endif %}</p>
+                <h3><a href="{{ record.source_url }}" target="_blank" rel="noopener">{{ record.title }}</a></h3>
+                <p>{{ record.description }}</p>
+            </div>
+            <dl class="search-result-facts">
+                {% if record.approval is not none %}<div><dt>Approval</dt><dd>{{ record.approval }}%</dd></div>{% endif %}
+                {% if record.steam250_score %}<div><dt>Score</dt><dd>{{ record.steam250_score }}</dd></div>{% endif %}
+                {% if record.review_count is not none %}<div><dt>Reviews</dt><dd>{{ "{:,}".format(record.review_count) }}</dd></div>{% endif %}
+                {% if record.release_year %}<div><dt>Released</dt><dd>{{ record.release_year }}</dd></div>{% endif %}
+            </dl>
+        </article>
+        {% endfor %}
+    </div>
+
+    {% if page_count > 1 %}
+    <nav class="search-pagination" aria-label="Search result pages">
+        {% if page > 1 %}
+        <a href="{{ url_for('search', q=query, source=source_filter, tag=tag_filter, sort=sort_by, page=page - 1) }}" rel="prev">&larr; Previous</a>
+        {% else %}<span class="pagination-disabled">&larr; Previous</span>{% endif %}
+        <span>Page {{ page }} of {{ page_count }}</span>
+        {% if page < page_count %}
+        <a href="{{ url_for('search', q=query, source=source_filter, tag=tag_filter, sort=sort_by, page=page + 1) }}" rel="next">Next &rarr;</a>
+        {% else %}<span class="pagination-disabled">Next &rarr;</span>{% endif %}
+    </nav>
+    {% endif %}
+    {% elif "temporarily unavailable" not in errors|join(" ") %}
+    <div class="empty-results search-empty">
+        <h2>No matching records were found</h2>
+        <p>Try a broader term or remove a filter.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

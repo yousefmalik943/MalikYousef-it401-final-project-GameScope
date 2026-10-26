@@ -4,9 +4,10 @@ import pytest
 import requests
 
 from app import create_app
-from models import GameRecord, db
+from models import GameRecord, SearchEvent, db
 from services.external_errors import ExternalServiceError
 from services.rawg_service import RawgService
+from services.search_service import retrieve_records
 from services.steam250_scraper import Steam250Scraper
 
 
@@ -256,3 +257,126 @@ def test_saved_record_survives_new_app_instance(tmp_path):
     with second_app.app_context():
         record = GameRecord.query.one()
         assert record.title == "Persistent Entry"
+
+
+def _add_search_record(app, title, description, source="Steam 250", tag="Strategy", approval=90):
+    record = GameRecord(
+        title=title,
+        description=description,
+        source=source,
+        source_url=f"https://example.test/{title.lower().replace(' ', '-')}",
+        tag=tag,
+        approval=approval,
+    )
+    with app.app_context():
+        db.session.add(record)
+        db.session.commit()
+    return record
+
+
+def test_search_normalizes_query_ranks_title_hits_and_records_telemetry(client, app):
+    _add_search_record(app, "Tactical Echo", "A tactical strategy adventure.", approval=91)
+    _add_search_record(app, "Echoes of Aether", "A tactical action adventure.", approval=99)
+
+    response = client.get("/search?q=%20tAcTiCaL%20")
+
+    assert response.status_code == 200
+    assert b'value="tAcTiCaL"' in response.data
+    assert response.data.index(b"Tactical Echo") < response.data.index(b"Echoes of Aether")
+    with app.app_context():
+        event = db.session.scalar(db.select(SearchEvent))
+        assert event.query == "tAcTiCaL"
+        assert event.result_count == 2
+        assert event.no_results is False
+
+
+def test_search_combines_keyword_source_and_tag_filters(client, app):
+    _add_search_record(app, "Tactical Echo", "Tactical battles.", source="Steam 250", tag="Strategy")
+    _add_search_record(app, "Tactical Harbor", "Tactical exploration.", source="Manual", tag="Adventure")
+
+    response = client.get("/search?q=tactical&source=Steam+250&tag=Strategy")
+
+    assert response.status_code == 200
+    assert b"Tactical Echo" in response.data
+    assert b"Tactical Harbor" not in response.data
+
+
+def test_search_pagination_preserves_query_filters_and_sort(client, app):
+    for index in range(12):
+        _add_search_record(app,
+            f"Tactical Entry {index:02}", "Tactical planning.", approval=index
+        )
+
+    first_page = client.get("/search?q=tactical&source=Steam+250&tag=Strategy&sort=approval")
+    second_page = client.get(
+        "/search?q=tactical&source=Steam+250&tag=Strategy&sort=approval&page=2"
+    )
+
+    assert b"12 results for" in first_page.data
+    assert b"Page 1 of 2" in first_page.data
+    assert b"Tactical Entry 11" in first_page.data
+    assert b"q=tactical&amp;source=Steam+250&amp;tag=Strategy&amp;sort=approval&amp;page=2" in first_page.data
+    assert b"Page 2 of 2" in second_page.data
+    assert b"Tactical Entry 11" not in second_page.data
+
+
+def test_search_handles_empty_long_invalid_and_no_result_queries(client, app):
+    empty = client.get("/search?q=%20%20")
+    too_long = client.get(f"/search?q={'x' * 121}")
+    invalid = client.get("/search?q=missing&source=not-real&sort=invalid&page=-2")
+
+    assert empty.status_code == 200
+    assert b"Enter a keyword to begin" in empty.data
+    assert too_long.status_code == 400
+    assert b"120 characters or fewer" in too_long.data
+    assert invalid.status_code == 200
+    assert b"Unknown source filter was removed" in invalid.data
+    assert b"Unknown sort option" in invalid.data
+    assert b"Page number must be positive" in invalid.data
+    assert b"No matching records were found" in invalid.data
+    with app.app_context():
+        event = db.session.scalar(db.select(SearchEvent))
+        assert event.no_results is True
+
+
+def test_search_escapes_like_wildcards_as_literal_query_text(client, app):
+    _add_search_record(app, "Discount 100%", "A complete collection.")
+    _add_search_record(app, "Discount 1000", "A different title.")
+
+    response = client.get("/search?q=100%25")
+
+    assert b"Discount 100%" in response.data
+    assert b"Discount 1000" not in response.data
+
+
+def test_search_history_displays_recorded_activity(client, app):
+    _add_search_record(app, "Tactical Echo", "Tactical battles.")
+    client.get("/search?q=tactical&tag=Strategy")
+
+    response = client.get("/search/history")
+
+    assert response.status_code == 200
+    assert b"Search Activity" in response.data
+    assert b"tactical" in response.data
+    assert b"Strategy" in response.data
+
+
+def test_search_evaluation_queries_return_expected_records(app):
+    _add_search_record(app, "Tactical Echo", "A thoughtful strategy game.", tag="Strategy", approval=91)
+    _add_search_record(app, "Echoes of Aether", "A tactical role-playing adventure.", tag="RPG", approval=92)
+    _add_search_record(app, "Hollow Lantern", "Quiet action exploration across echoing caves.", tag="Adventure", approval=94)
+    _add_search_record(app, "Garden Circuit", "Build and manage a peaceful garden.", tag="Simulation", approval=88)
+    _add_search_record(app, "Neon Harbor", "Fast action through a crowded port.", tag="Action", approval=86)
+
+    evaluation_cases = {
+        "echo": {"Echoes of Aether", "Hollow Lantern", "Tactical Echo"},
+        "tactical": {"Echoes of Aether", "Tactical Echo"},
+        "garden": {"Garden Circuit"},
+        "action": {"Hollow Lantern", "Neon Harbor"},
+        "wireless headphones": set(),
+    }
+
+    with app.app_context():
+        for query, expected_titles in evaluation_cases.items():
+            records, _ = retrieve_records(query)
+            assert {record.title for record in records} == expected_titles

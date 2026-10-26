@@ -529,6 +529,49 @@ Rank, tag, App ID, score, approval, review count, price, year, and image URL
 are additional fields because they retain useful A2 acquisition attributes
 for filtering and display without introducing another table.
 
+#### ERD
+
+The current schema has one table and no relationships. The standalone editable
+diagram is in [docs/gamescope-erd.md](docs/gamescope-erd.md).
+
+```mermaid
+erDiagram
+  GAME_RECORDS {
+    int id PK
+    string title
+    text description
+    string source
+    string source_url UK
+    datetime retrieved_date
+    datetime created_date
+    string steam_app_id UK
+    int rank
+    string tag
+    string release_year
+    string steam250_score
+    int review_count
+    int approval
+    string price
+    string image_url
+  }
+```
+
+#### Data Workflow
+
+```mermaid
+flowchart LR
+  A[Steam 250 or user form] --> B[Parse and validate]
+  B --> C{Valid record?}
+  C -- No --> D[Show error or skip entry]
+  C -- Yes --> E{Existing source URL or App ID?}
+  E -- Yes --> F[Update existing row]
+  E -- No --> G[Insert new row]
+  F --> H[(game_records)]
+  G --> H
+  H --> I[Read and display Saved Games]
+  J[Edit or delete form] --> B
+```
+
 ### Application Architecture
 
 `app.py` creates the Flask application, initializes Flask-SQLAlchemy, registers
@@ -714,6 +757,297 @@ service, its credentials, or the network rather than Flask's local routes.
 
 The completed A2 screenshot document is included in the repository:
 [Yousef_Malik_A2_Screenshots.pdf](Yousef_Malik_A2_Screenshots.pdf).
+
+## A4 Documentation
+
+### Project Title
+
+**GameScope: Searchable PC Game Intelligence**<br>
+**Application:** GameScope<br>
+**Student:** Yousef Malik<br>
+**Course and assignment:** IT401, A4 - Expanding the Web Intelligence Application with Search
+
+### Project Overview
+
+GameScope helps PC players and project evaluators find useful information in
+the persistent game records acquired from Steam 250 or maintained in Saved
+Games. A4 adds a dedicated search experience over database rows, so each search
+does not call Steam, RAWG, or another external source. Keyword retrieval,
+Boolean filters, relevance ordering, alternative sorts, pagination, and basic
+search telemetry make the A3 collection easier to explore.
+
+### Search and Retrieval Features
+
+- GET search at `/search?q=wireless+headphones`; the submitted text stays in
+  the URL and search field.
+- Case-insensitive keyword/phrase matching in `game_records.title` and
+  `game_records.description`.
+- Optional source and primary Steam tag/genre filters, combined with the query
+  using AND.
+- Relevance, newest, oldest, alphabetical, and highest-approval ordering.
+- Relevance score: exact title match 5, partial title match 3, description
+  match 1; approval and retrieval date break ties.
+- Ten results per page, with total count, range, page number, and parameter-
+  preserving previous/next links.
+- `search_events` records the normalized query, timestamp, total matching
+  count, chosen filters and sort, and whether the query had no matches.
+- Search activity is visible at `/search/history` (most recent 50 events).
+
+### Search Workflow
+
+```mermaid
+flowchart LR
+  A[GET keyword or phrase] --> B[Trim and validate query]
+  B --> C[Parameterized title OR description match]
+  C --> D[AND source and tag filters]
+  D --> E[Rank or apply chosen sort]
+  E --> F[Count and fetch one 10-record page]
+  F --> G[Render results and page links]
+  F --> H[Record query telemetry]
+```
+
+The route coordinates the request and response. `services/search_service.py`
+normalizes and validates query text, builds SQLAlchemy statements, applies
+filter conditions and ranking, then limits the database read to the requested
+page. Search uses bound SQLAlchemy expressions rather than interpolating raw
+input into SQL. Whitespace trimming and case-insensitive matching are basic
+normalization steps related to Manning's treatment of preparing query terms;
+the entered phrase itself is preserved for display. It does not tokenize,
+stem, remove stop words, or expand synonyms.
+
+### Searchable Information
+
+`GameRecord` is the searchable model. Title and description are searched
+because they express the game's identity and acquired summary. `source` and
+`tag` are exact-match filters, not keyword fields: they represent structured
+metadata that users can select precisely. Approval and retrieval date affect
+ranking or sorting; Steam App ID, price, score, review count, year, image, and
+source URL are displayed or retained as metadata and do not affect keyword
+matching. Results link to the original `source_url`.
+
+### Retrieval Strategy
+
+The service uses SQLAlchemy `ILIKE`-style expressions for case-insensitive
+substring matching in title OR description. `%` and `_` in user text are
+escaped so they are treated literally. Database parameters are bound by
+SQLAlchemy. When filters are selected, they are combined as
+`keyword AND source AND tag`; omitted filters have no effect.
+
+Relevance ordering places an exact title match above a partial title match,
+and a partial title match above a description match. Higher Steam approval,
+newer retrieval, and title order provide deterministic tie-breaks. Explicit
+sort choices replace relevance ordering with newest, oldest, alphabetical, or
+highest approval. This simple rule favors direct game-name evidence before a
+summary mention while preserving stable ordering for equal scores.
+
+Retrieval follows **retrieve, filter, rank, paginate, display**. A count query
+reports the total filtered match count, while the result statement fetches
+only ten rows using limit and offset. Requests for pages outside the available
+range are clamped to the last page; invalid or non-positive pages return page
+one with a notice.
+
+### Search Telemetry
+
+The `search_events` model stores only query text (up to 120 characters),
+timestamp, total result count, source/tag filters, sort selection, and a
+no-results flag. It does not store a user identity, session identifier, IP
+address, clicked result, or other personal information. Telemetry can reveal
+frequent queries, common zero-result terms, and whether filters or ranking
+options are used. Those signals can guide vocabulary improvements, query
+suggestions, result evaluation, and later recommendation work. Logging is
+best-effort: a telemetry write failure is logged and shown as a notice without
+discarding search results.
+
+### Database Schema
+
+The existing `game_records` table remains the source collection. A4 adds an
+independent `search_events` table; there is no foreign-key relationship because
+an event describes a query, not one selected game. `flask --app app init-db`
+creates the new table in the configured schema. It does not alter existing
+columns; A4 adds no new `game_records` columns.
+
+| Table | Purpose | Primary key | Important attributes | Relationships |
+|---|---|---|---|---|
+| `game_records` | Persisted Steam 250 or manually managed game data | `id` | `title`, `description`, `source`, unique `source_url`, dates, `steam_app_id`, rank, tag, approval, score, price, year | None |
+| `search_events` | Basic completed-search telemetry | `id` | `query`, `created_at`, `result_count`, `source_filter`, `tag_filter`, `sort_by`, `no_results` | None; intentionally does not identify a game or user |
+
+### Current Features
+
+- Homepage, local A1 collection, and Steam 250 Hidden Gems discovery
+- RAWG API metadata, Steam Reviews, and Steam 250 web scraping with fallback
+- MySQL-backed acquired records with SQLite local-development fallback
+- Saved Games CRUD, validation, duplicate checks, and error feedback
+- Database keyword search across title and description
+- Boolean source and genre filters
+- Relevance, newest, oldest, alphabetical, and approval sorting
+- Ten-result pagination with preserved query and selection state
+- Search activity telemetry and recent-history view
+
+### Project Structure
+
+```text
+app.py                         Flask factory, database setup, and init-db command
+config.py                      MySQL/SQLite settings and environment configuration
+models/__init__.py              GameRecord, SearchEvent, and SQLAlchemy extension
+routes/main.py                 Search, discovery, and search-history routes
+routes/library.py              Saved Games CRUD and validation
+services/search_service.py      Query normalization, SQL retrieval, ranking, pagination
+services/persistence_service.py Steam 250 database upsert logic
+templates/search.html           GET search form and paginated result presentation
+templates/search_history.html   Recent search telemetry
+templates/                      Shared navigation, discovery, and CRUD templates
+static/style.css                Responsive application and search styling
+tests/test_app.py               Route, search evaluation, telemetry, and service tests
+scripts/build_a4_report.py      README-to-PDF report generator
+```
+
+### Installation Instructions
+
+1. Clone the repository and enter the project folder.
+2. Create and activate a virtual environment, then install dependencies:
+
+   ```bash
+   python -m venv .venv
+   # Windows PowerShell
+   .venv\Scripts\Activate.ps1
+   python -m pip install -r requirements.txt
+   ```
+
+3. Copy `.env.example` to `.env`. Configure the supplied MySQL connection
+   values for the course database. `DATABASE_URL` may be used instead of the
+   individual MySQL settings; omit MySQL settings to use local SQLite.
+4. Initialize tables and run the application:
+
+   ```bash
+   flask --app app init-db
+   python app.py
+   ```
+
+5. Open `http://127.0.0.1:5000/search` or use the Search Database navigation.
+
+### Environment Variables
+
+`DATABASE_URL`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`,
+`MYSQL_DATABASE`, `SECRET_KEY`, `RAWG_API_KEY`, and optional `FLASK_ENV`.
+Credentials belong in the ignored `.env` file and must not be included in
+source control or screenshots.
+
+### Error Handling
+
+- Empty query: displays “Enter a keyword to begin” and does not record telemetry.
+- Query longer than 120 characters: displays a validation message and does not
+  run the query.
+- Invalid source/tag values are discarded; unsupported sort values fall back
+  to relevance.
+- Invalid or negative page values fall back to page one; an excessive page is
+  clamped to the last available page.
+- No matches displays guidance to broaden the query or remove a filter and
+  records a no-results event.
+- Database retrieval or filter-list failures are rolled back, logged, and
+  shown as “Search is temporarily unavailable.”
+- Telemetry failures are rolled back and logged; successful search results
+  remain visible with a status notice.
+- Missing optional record metadata is omitted from the result details.
+
+### Search Evaluation
+
+The repeatable evaluation test seeds five known game records and checks these
+queries against expected relevant records. “Actual” refers to the ordered
+matches returned by the implemented retrieval rules for this controlled set;
+the fixture has no external or unjudged records.
+
+| Query | Expected relevant records | Actual results | Observation |
+|---|---|---|---|
+| `echo` | Echoes of Aether; Tactical Echo; Hollow Lantern (description says “echoing”) | Echoes of Aether, Tactical Echo, Hollow Lantern | Title hits appear before the description hit; no fixture false positives |
+| `tactical` | Tactical Echo; Echoes of Aether | Tactical Echo, Echoes of Aether | Title mention ranks before description mention |
+| `garden` | Garden Circuit | Garden Circuit | One relevant title match |
+| `action` | Hollow Lantern; Neon Harbor | Hollow Lantern, Neon Harbor | Both description matches; higher approval breaks the tie |
+| `wireless headphones` | None in the fixture | No results | Correct zero-result state and telemetry |
+
+For the controlled fixture, judged precision and recall are both 100% for
+returned relevant records, and the zero-result case correctly returns none.
+This is a small synthetic evaluation, not evidence about every real Steam 250
+record. The `echo` case also illustrates substring behavior: it matches
+“echoing,” which may be less useful than token-aware matching. One likely
+quality improvement is tokenization with stemming or synonym expansion, then
+re-evaluation against a larger human-judged set.
+
+### Screenshots
+
+The captures below show the A4 search workflow using clearly synthetic demo
+records in an isolated local SQLite database. They are interface evidence, not
+the contents of a course MySQL database.
+
+**Search form**
+
+![A4 search form](static/images/a4-search-form.png)
+
+**Keyword results and relevance order**
+
+![A4 ranked search results](static/images/a4-search-ranked.png)
+
+**Source and genre filters with approval sorting**
+
+![A4 filtered and sorted results](static/images/a4-filtered-search.png)
+
+**Pagination**
+
+![A4 second search results page](static/images/a4-search-pagination.png)
+
+**No-results state**
+
+![A4 no-results state](static/images/a4-search-no-results.png)
+
+**Search telemetry history**
+
+![A4 search telemetry](static/images/a4-search-telemetry.png)
+
+### Design Decisions
+
+- Title and description are the central searchable text: they identify a game
+  and summarize its information. Structured source and primary tag are filters
+  to avoid ambiguous free-text metadata matching.
+- Exact and partial title matches outrank description matches because a game
+  name is stronger evidence that a result answers the query.
+- Ten results per page keeps the view scannable while allowing a modest result
+  set; query and filters remain in navigation links.
+- Telemetry is intentionally anonymous and limited to retrieval quality
+  signals. It can support future query refinement and recommendations without
+  collecting personal details.
+
+### Known Limitations
+
+- Substring matching does not understand synonyms, spelling variants, or
+  semantic similarity; singular/plural and word-boundary behavior can differ.
+- The ranking is a small rule-based score, not learned relevance or
+  personalization. Approval may reflect limited review samples.
+- Search only covers records already stored in the configured database; it
+  does not search the file-backed A1 catalog or call external sources.
+- The `ILIKE`-style substring query is not a MySQL full-text index and may be
+  slow as the database grows.
+- Search history is anonymous but visible to anyone with access to this
+  unauthenticated course demonstration; do not enter sensitive query text.
+- `db.create_all()` creates the new telemetry table but does not manage schema
+  migrations for future model changes.
+
+### Future Work
+
+Potential A5 work includes token-aware matching, MySQL full-text indexes,
+semantic retrieval with embeddings, query suggestions, personalized ranking,
+recommendations, relevance feedback from selected results, and a larger
+human-judged precision/recall evaluation. Retrieved, filtered records can also
+be prepared as grounded inputs for later intelligence-generation features.
+
+### A4 Screenshots and PDF
+
+Generate the A4 report from the complete README with:
+
+```bash
+python scripts/build_a4_report.py
+```
+
+The output is `Yousef_Malik_A4_Project_Report.pdf`; the linked screenshots are
+included in the report.
 
 It contains labeled evidence of the application's required workflows,
 including:

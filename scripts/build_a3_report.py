@@ -60,6 +60,10 @@ def build_story():
         name="ReportCode", fontName="Courier", fontSize=8, leading=10,
         backColor=colors.HexColor("#f2f5f8"), borderPadding=7, spaceBefore=3, spaceAfter=9,
     ))
+    styles.add(ParagraphStyle(
+        name="ReportCaption", parent=styles["Italic"], fontSize=8, leading=10,
+        textColor=colors.HexColor("#5b6472"), spaceAfter=5,
+    ))
 
     lines = README.read_text(encoding="utf-8").splitlines()
     story = []
@@ -106,7 +110,7 @@ def build_story():
             if image_file.exists():
                 image = Image(str(image_file))
                 image._restrictSize(6.5 * inch, 4.8 * inch)
-                story.extend([Paragraph(inline_markup(alt), styles["Caption"]), image, Spacer(1, 10)])
+                story.extend([Paragraph(inline_markup(alt), styles["ReportCaption"]), image, Spacer(1, 10)])
             else:
                 story.append(Paragraph(f"Screenshot pending: {inline_markup(alt)}", styles["Italic"]))
             index += 1
