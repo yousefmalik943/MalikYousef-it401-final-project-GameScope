@@ -945,6 +945,9 @@ source control or screenshots.
   records a no-results event.
 - Database retrieval or filter-list failures are rolled back, logged, and
   shown as “Search is temporarily unavailable.”
+- If the database lacks expected application tables, the search routes create
+  only missing tables on first use; existing tables and game records are left
+  unchanged. `flask --app app init-db` remains the normal setup step.
 - Telemetry failures are rolled back and logged; successful search results
   remain visible with a status notice.
 - Missing optional record metadata is omitted from the result details.

@@ -65,6 +65,7 @@ def register_routes(app):
             errors.append("Page number must be positive; showing page 1.")
 
         try:
+            _ensure_search_tables()
             sources = [row[0] for row in db.session.query(GameRecord.source).distinct().order_by(GameRecord.source).all()]
             tags = [row[0] for row in db.session.query(GameRecord.tag).filter(GameRecord.tag.isnot(None)).distinct().order_by(GameRecord.tag).all()]
         except SQLAlchemyError:
@@ -94,6 +95,7 @@ def register_routes(app):
         response_status = 200
         if query:
             try:
+                _ensure_search_tables()
                 records, total = retrieve_records(
                     query, source_filter, tag_filter, sort_by, page
                 )
@@ -110,7 +112,6 @@ def register_routes(app):
                 records = []
                 total = 0
                 page_count = 1
-                response_status = 503
             else:
                 event = SearchEvent(
                     query=query,
@@ -149,6 +150,7 @@ def register_routes(app):
     @app.route("/search/history")
     def search_history():
         try:
+            _ensure_search_tables()
             events = db.session.scalars(
                 db.select(SearchEvent).order_by(SearchEvent.created_at.desc()).limit(50)
             ).all()
@@ -303,3 +305,6 @@ def register_routes(app):
         )
 
     register_library_routes(app)
+
+def _ensure_search_tables():
+    db.create_all()

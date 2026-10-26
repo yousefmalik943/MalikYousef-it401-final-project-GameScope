@@ -361,6 +361,45 @@ def test_search_history_displays_recorded_activity(client, app):
     assert b"Strategy" in response.data
 
 
+def test_search_history_creates_missing_telemetry_table(client, app):
+    with app.app_context():
+        SearchEvent.__table__.drop(db.engine, checkfirst=True)
+
+    response = client.get("/search/history")
+
+    assert response.status_code == 200
+    assert b"No searches recorded yet" in response.data
+    with app.app_context():
+        assert db.inspect(db.engine).has_table("search_events")
+
+
+def test_search_creates_missing_telemetry_table_before_recording(client, app):
+    _add_search_record(app, "Tactical Echo", "Tactical battles.")
+    with app.app_context():
+        SearchEvent.__table__.drop(db.engine, checkfirst=True)
+
+    response = client.get("/search?q=tactical")
+
+    assert response.status_code == 200
+    assert b"Tactical Echo" in response.data
+    with app.app_context():
+        assert db.session.scalar(db.select(SearchEvent)).query == "tactical"
+
+
+def test_search_initializes_empty_database_without_traceback(client, app):
+    with app.app_context():
+        db.drop_all()
+
+    response = client.get("/search?q=missing")
+
+    assert response.status_code == 200
+    assert b"No matching records were found" in response.data
+    with app.app_context():
+        assert db.inspect(db.engine).has_table("game_records")
+        assert db.inspect(db.engine).has_table("search_events")
+        assert db.session.scalar(db.select(SearchEvent)).no_results is True
+
+
 def test_search_evaluation_queries_return_expected_records(app):
     _add_search_record(app, "Tactical Echo", "A thoughtful strategy game.", tag="Strategy", approval=91)
     _add_search_record(app, "Echoes of Aether", "A tactical role-playing adventure.", tag="RPG", approval=92)
