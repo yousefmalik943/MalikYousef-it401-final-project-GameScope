@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Search Activity | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page search-page">
+    <div class="page-heading">
+        <p class="eyebrow">Retrieval Telemetry</p>
+        <h1>Search Activity</h1>
+        <p>Recent completed searches, including filters, sort selection, and matching-record counts.</p>
+    </div>
+    {% if error %}
+    <div class="empty-results"><h2>Search history is temporarily unavailable</h2><p>Please try again later.</p></div>
+    {% elif events %}
+    <div class="table-scroll">
+        <table class="search-history-table">
+            <thead><tr><th>Query</th><th>Completed</th><th>Filters</th><th>Sort</th><th>Results</th></tr></thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td><a href="{{ url_for('search', q=event.query, source=event.source_filter or '', tag=event.tag_filter or '', sort=event.sort_by) }}">{{ event.query }}</a></td>
+                    <td>{{ event.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</td>
+                    <td>{% if event.source_filter %}{{ event.source_filter }}{% endif %}{% if event.tag_filter %}{% if event.source_filter %} · {% endif %}{{ event.tag_filter }}{% endif %}{% if not event.source_filter and not event.tag_filter %}None{% endif %}</td>
+                    <td>{{ event.sort_by }}</td>
+                    <td>{{ event.result_count }}{% if event.no_results %} (none){% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-results"><h2>No searches recorded yet</h2><p>Completed keyword searches will appear here.</p><a class="cta-button" href="{{ url_for('search') }}">Start a search</a></div>
+    {% endif %}
+</section>
+{% endblock %}

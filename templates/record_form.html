@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if record else 'Add' }} Saved Game | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page record-form-page">
+    <div class="page-heading">
+        <p class="eyebrow">Persistent Collection</p>
+        <h1>{{ 'Edit' if record else 'Add' }} Saved Game</h1>
+        <p>Provide the title, description, source, and a valid source URL.</p>
+    </div>
+
+    <form class="record-form" method="post">
+        <div class="filter-field">
+            <label for="title">Title <span aria-hidden="true">*</span></label>
+            <input id="title" name="title" required maxlength="200"
+                   value="{{ values.get('title', record.title if record else '') }}">
+        </div>
+        <div class="filter-field">
+            <label for="description">Description <span aria-hidden="true">*</span></label>
+            <textarea id="description" name="description" required rows="5">{{ values.get('description', record.description if record else '') }}</textarea>
+        </div>
+        <div class="filter-field">
+            <label for="source">Source <span aria-hidden="true">*</span></label>
+            <input id="source" name="source" required maxlength="120"
+                   value="{{ values.get('source', record.source if record else '') }}">
+        </div>
+        <div class="filter-field">
+            <label for="source_url">Source URL <span aria-hidden="true">*</span></label>
+            <input id="source_url" name="source_url" type="url" required maxlength="500"
+                   value="{{ values.get('source_url', record.source_url if record else '') }}">
+        </div>
+        <div class="filter-actions">
+            <button class="filter-button" type="submit">{{ 'Save changes' if record else 'Create record' }}</button>
+            <a class="clear-link" href="{{ url_for('library') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

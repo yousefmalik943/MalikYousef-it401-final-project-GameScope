@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Generated Intelligence | GameScope{% endblock %}
+
+{% block content %}
+<section class="explore-page search-page">
+    <div class="page-heading">
+        <p class="eyebrow">AI Generated</p>
+        <h1>Intelligence History</h1>
+        <p>Recent recommendation outputs generated from retrieved database records, including the prompt version, model used, and supporting evidence.</p>
+    </div>
+
+    {% if error %}
+    <div class="empty-results"><h2>Generated intelligence is temporarily unavailable</h2><p>Please try again later.</p></div>
+    {% elif records %}
+    <div class="search-result-list">
+        {% for item in records %}
+        <article class="search-result">
+            <div class="search-result-main">
+                <p class="search-result-meta">{{ item.model_used }} · {{ item.prompt_version }} · {{ item.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+                <h3>{{ item.recommendation }}</h3>
+                <p>{{ item.summary }}</p>
+                <p><strong>Confidence:</strong> {{ item.confidence }}</p>
+                <p><strong>Request:</strong> {{ item.user_request }}</p>
+                <p><strong>Supporting items:</strong> {{ item.supporting_items }}</p>
+            </div>
+            <dl class="search-result-facts">
+                <div><dt>Source IDs</dt><dd>{{ item.source_record_ids }}</dd></div>
+                <div><dt>Output</dt><dd>{{ item.output_data }}</dd></div>
+            </dl>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-results"><h2>No generated intelligence yet</h2><p>Searches with records will create a recommendation here.</p><a class="cta-button" href="{{ url_for('search') }}">Search database</a></div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}GameScope | Intelligent Game Discovery{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <img class="hero-logo" src="{{ url_for('static', filename='images/gamescope-logo.svg') }}" alt="GameScope logo">
+        <p class="eyebrow">Intelligent Game Discovery</p>
+        <h1>Discover beyond the obvious.</h1>
+        <p class="tagline">Find games that match what you actually enjoy.</p>
+        <p class="description">
+            GameScope helps PC gamers discover video games using game information,
+            player reviews, and personal preferences. It highlights meaningful
+            strengths, common concerns, and overlooked titles so users can
+            confidently decide what to play or purchase next.
+        </p>
+        <div class="hero-actions">
+            <a class="cta-button" href="{{ url_for('hidden_gems') }}">Discover Hidden Gems</a>
+            <a class="secondary-button" href="{{ url_for('explore') }}">Browse Local Collection</a>
+        </div>
+        <p class="student-name">Created by Yousef Malik</p>
+    </div>
+</section>
+{% endblock %}
