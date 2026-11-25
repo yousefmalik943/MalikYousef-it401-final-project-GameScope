@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from datetime import datetime, timezone
 
 import requests
 from bs4 import BeautifulSoup
@@ -32,6 +33,7 @@ class Steam250Scraper:
         self.alternate_urls = alternate_urls or []
         self.used_fallback = False
         self.used_mirror = False
+        self.fetched_at = None
 
     @staticmethod
     def _retrying_session():
@@ -52,6 +54,7 @@ class Steam250Scraper:
         self.used_mirror = False
         cached = self._cache.get(self.source_url)
         if cached and time.time() - cached["saved_at"] < self.cache_seconds:
+            self.fetched_at = cached.get("fetched_at")
             self.used_fallback = cached.get("is_fallback", False)
             self.used_mirror = cached.get("is_mirror", False)
             return cached["games"][:limit]
@@ -61,10 +64,12 @@ class Steam250Scraper:
             try:
                 games = self._fetch_games(url)
                 self.used_mirror = index > 0
+                self.fetched_at = datetime.now(timezone.utc)
                 self._cache[self.source_url] = {
                     "saved_at": time.time(),
                     "games": games,
                     "is_mirror": self.used_mirror,
+                    "fetched_at": self.fetched_at,
                 }
                 return games[:limit]
             except ExternalServiceError as exc:
@@ -104,6 +109,7 @@ class Steam250Scraper:
                     games = json.load(fallback_file)
                 if isinstance(games, list) and games:
                     self.used_fallback = True
+                    self.fetched_at = None  # Snapshot acquisition time is not recorded in this file.
                     self._cache[self.source_url] = {
                         "saved_at": time.time(),
                         "games": games,

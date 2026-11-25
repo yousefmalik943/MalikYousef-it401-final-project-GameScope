@@ -35,7 +35,7 @@ class Config:
     # A2 external information sources
     RAWG_API_KEY = os.environ.get("RAWG_API_KEY")
     RAWG_API_URL = "https://api.rawg.io/api"
-    STEAM_REVIEWS_URL = "https://store.steampowered.com/appreviews"
+    STEAM_REVIEWS_URL = "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1"
     STEAM250_URL = "https://steam250.com/hidden_gems"
     STEAM250_MIRROR_URL = "https://raw.githubusercontent.com/250/Steam-250/gh-pages/hidden_gems.html"
     STEAM250_FALLBACK_PATH = os.path.join(DATA_DIR, "steam250_fallback.json")
@@ -47,6 +47,11 @@ class Config:
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
     OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     AI_REQUEST_TIMEOUT = int(os.environ.get("AI_REQUEST_TIMEOUT", "15"))
+    STEAM_WEB_API_KEY = os.environ.get("STEAM_WEB_API_KEY")
+    # Fixed public origin prevents Host headers from changing the OpenID callback.
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
 
 
 class DevelopmentConfig(Config):
@@ -55,6 +60,7 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
 
 
 config = {

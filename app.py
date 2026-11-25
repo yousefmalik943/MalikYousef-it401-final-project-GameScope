@@ -7,14 +7,18 @@ from models import db
 from routes.main import register_routes
 
 
-def create_app(config_name=None):
+def create_app(config_name=None, config_overrides=None):
     config_name = config_name or os.environ.get("FLASK_ENV", "default")
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+    if config_overrides:
+        app.config.update(config_overrides)
 
     db.init_app(app)
     register_routes(app)
+    from routes.decisions import decisions
+    app.register_blueprint(decisions)
 
     @app.cli.command("init-db")
     def init_db():

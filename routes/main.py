@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from flask import current_app, flash, render_template, request
+from flask import current_app, flash, redirect, render_template, request, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import GameRecord, GeneratedIntelligence, SearchEvent, db
@@ -67,9 +67,22 @@ def _persist_generated_intelligence(user_request, records, payload):
 
 
 def register_routes(app):
+    @app.route("/game-artwork/<int:app_id>")
+    def game_artwork(app_id):
+        from services.game_artwork_service import get_game_artwork
+        image = get_game_artwork(app_id)
+        response = redirect(image or url_for("static", filename="images/community-doodles.svg"))
+        response.headers["Cache-Control"] = f"public, max-age={86400 if image else 300}"
+        return response
+
     @app.route("/")
     def index():
-        return render_template("index.html")
+        try:
+            with open(current_app.config["STEAM250_FALLBACK_PATH"], encoding="utf-8") as source:
+                featured_games = json.load(source)[:4]
+        except (OSError, ValueError, TypeError):
+            featured_games = []
+        return render_template("index.html", featured_games=featured_games)
 
     @app.route("/search")
     def search():
@@ -310,7 +323,12 @@ def register_routes(app):
         try:
             games = scraper.get_hidden_gems(limit=250)
             try:
-                saved_count = persist_steam250_games(games)
+                db.create_all()
+                saved_count = persist_steam250_games(
+                    games,
+                    source_mode="snapshot" if scraper.used_fallback else "mirror" if scraper.used_mirror else "live",
+                    fetched_at=scraper.fetched_at,
+                )
                 if saved_count:
                     flash(f"Updated {saved_count} Steam 250 records in the database.", "success")
             except SQLAlchemyError:
@@ -377,6 +395,8 @@ def register_routes(app):
             steam_data=steam_data,
             source_errors=source_errors,
             steam250_url=current_app.config["STEAM250_URL"],
+            ranking_live=not scraper.used_fallback,
+            ranking_fetched_at=scraper.fetched_at,
         )
 
     register_library_routes(app)

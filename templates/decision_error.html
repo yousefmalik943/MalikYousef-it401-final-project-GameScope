@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Play Next unavailable | GameScope{% endblock %}
+{% block content %}
+<section class="explore-page empty-results">
+    <h1>Play Next is temporarily unavailable</h1>
+    <p>The database could not complete this request. Feedback may not have been saved. Please try again.</p>
+    <a class="clear-link" href="{{ url_for('decisions.dashboard') }}">Return to Play Next</a>
+</section>
+{% endblock %}

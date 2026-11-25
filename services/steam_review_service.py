@@ -1,4 +1,5 @@
 import requests
+import json
 
 from services.external_errors import ExternalServiceError
 
@@ -18,16 +19,18 @@ class SteamReviewService:
 
         try:
             response = self.session.get(
-                f"{self.base_url}/{app_id}",
+                f"{self.base_url}/",
                 params={
-                    "json": 1,
-                    "filter": "all",
-                    "language": "english",
+                    "input_json": json.dumps({
+                    "appid": int(app_id),
+                    "filter": 0,
+                    "languages": ["english"],
                     "day_range": 365,
-                    "review_type": "all",
-                    "purchase_type": "all",
+                    "review_type": 0,
+                    "purchase_type": 1,
                     "num_per_page": max(1, min(int(limit), 20)),
-                    "filter_offtopic_activity": 1,
+                    "filter_offtopic_activity": True,
+                    }),
                 },
                 headers={"User-Agent": "GameScope-A2/1.0 (student academic project)"},
                 timeout=self.timeout,
@@ -53,11 +56,11 @@ class SteamReviewService:
             )
 
         try:
-            payload = response.json()
-        except ValueError as exc:
+            payload = response.json().get("response")
+        except (ValueError, AttributeError) as exc:
             raise ExternalServiceError("Steam returned data that could not be read.") from exc
 
-        if payload.get("success") != 1:
+        if not isinstance(payload, dict):
             raise ExternalServiceError("Steam did not return reviews for this game.")
 
         summary = payload.get("query_summary") or {}

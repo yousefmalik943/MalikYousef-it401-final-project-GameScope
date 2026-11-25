@@ -104,7 +104,7 @@
     <div class="results-heading">
         <div>
             <h2>Steam 250 Ranking Results</h2>
-            <p class="source-attribution">Live ranking data from <a href="{{ steam250_url }}" target="_blank" rel="noopener">Steam 250</a>.</p>
+            <p class="source-attribution">{{ 'Live ranking data' if ranking_live else 'Saved snapshot data (original acquisition date unknown)' }} from <a href="{{ steam250_url }}" target="_blank" rel="noopener">Steam 250</a>.{% if ranking_fetched_at %} Fetched {{ ranking_fetched_at.strftime('%Y-%m-%d %H:%M UTC') }}.{% endif %}</p>
         </div>
         <p>{{ games|length }} game{% if games|length != 1 %}s{% endif %} shown</p>
     </div>

@@ -1,4 +1,6 @@
 import requests
+import re
+import unicodedata
 
 from services.external_errors import ExternalServiceError, MissingApiKeyError
 
@@ -66,10 +68,20 @@ class RawgService:
         except (ValueError, AttributeError) as exc:
             raise ExternalServiceError("RAWG returned data that could not be read.") from exc
 
+        if not isinstance(results, list):
+            raise ExternalServiceError("RAWG returned an unreadable result list.")
         if not results:
             raise ExternalServiceError(f'RAWG found no PC game matching "{query}".')
 
         game = results[0]
+        if not isinstance(game, dict):
+            raise ExternalServiceError("RAWG returned an unreadable game record.")
+        def normalized_title(value):
+            return re.sub(r"[\W_]+", "", unicodedata.normalize("NFKC", value).casefold())
+        if normalized_title(game.get("name") or "") != normalized_title(query):
+            raise ExternalServiceError(
+                "RAWG returned a different title. Metadata was withheld to avoid attaching it to the wrong game. Try the full game title."
+            )
         return {
             "id": game.get("id"),
             "title": game.get("name") or query,
@@ -79,11 +91,11 @@ class RawgService:
             "metacritic": game.get("metacritic"),
             "playtime": game.get("playtime"),
             "image": game.get("background_image"),
-            "genres": [item.get("name") for item in game.get("genres", []) if item.get("name")],
+            "genres": [item.get("name") for item in (game.get("genres") or []) if isinstance(item, dict) and item.get("name")],
             "platforms": [
                 item.get("platform", {}).get("name")
-                for item in game.get("platforms", [])
-                if item.get("platform", {}).get("name")
+                for item in (game.get("platforms") or [])
+                if isinstance(item, dict) and isinstance(item.get("platform"), dict) and item["platform"].get("name")
             ],
             "source_url": f"https://rawg.io/games/{game.get('slug')}" if game.get("slug") else "https://rawg.io/",
         }

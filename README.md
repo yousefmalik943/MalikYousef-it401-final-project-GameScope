@@ -2,8 +2,544 @@
 
 **Student:** Yousef Malik  
 **Course:** IT401<br>
-**Assignment:** A5 - Expanding the Web Intelligence Application with Intelligence Generation
+**Assignment:** A6 - Explainable Decision Support and Steam Personalization
 **Application name:** GameScope
+
+## Community-inspired interface
+
+GameScope's A6 interface presents game discovery as a welcoming place to explore.
+Soft greens, cream backgrounds, rounded white panels, colorful game artwork, and
+friendly illustrations give the application a playful identity while keeping
+recommendation evidence, confidence, and decision controls easy to find.
+
+### Inspiration and visual direction
+
+The primary visual inspiration is **Nintendo's Miiverse**, specifically the
+reference screenshot supplied by the project owner. Its green surroundings,
+white community panels, game-image tiles, and handwritten drawing accents shaped
+the direction. Nintendo's [official Miiverse overview](https://www.nintendo.co.jp/hardware/wiiu/miiverse/index.html)
+describes its game communities and handwritten posts, which provide context for
+the welcoming, expressive reference design.
+
+GameScope adapts those visual cues with its own branding, controller illustration,
+navigation icons, and doodles. Steam supplies game information and artwork. The
+interface's community-inspired appearance supports personal game discovery;
+features shown in the screenshots are GameScope's actual discovery and decision
+tools.
+
+| Reference cue | GameScope adaptation | Purpose |
+|---|---|---|
+| Green surroundings and white community panels | A soft green dotted background with cream and white cards | Separates sections while keeping the page welcoming |
+| Game-image community tiles | A two-column home-page collection board and illustrated recommendation cards | Makes games easier to recognize and explore |
+| Handwritten drawings and expressive faces | Original controller doodles, speech bubbles, stars, hearts, and a friendly note card | Adds personality around the functional content |
+| Simple, approachable navigation | Icon-based discovery sidebar, active-page indicators, and a Your plans shortcut | Keeps the main tools and saved decisions accessible |
+| Rounded, compact panels | Rounded forms, category chips, confidence badges, and comparison sections | Organizes inputs and evidence into readable groups |
+
+### What changed on each screen
+
+- **Home:** a welcome panel, original controller artwork, collection tiles, and a
+  short guide to linking Steam, choosing a path, and comparing recommendations.
+  The artwork board is labeled as a preview from the saved Steam 250 collection.
+- **Shared navigation:** desktop pages use a discovery sidebar. Smaller screens
+  use a compact navigation grid. The current section stays highlighted, including
+  history and record-editing views.
+- **Play Next:** a three-step navigation strip connects play history, path
+  preferences, and the comparison. Connected-account information and style signals
+  sit in separate panels; optional explanatory material uses expandable sections.
+- **Recommendation details:** game artwork introduces each card, followed by its
+  role, confidence, sourced genres/tags, reasoning, suggested trial, and evidence.
+- **Comparison and feedback:** options remain comparable in a table, with the
+  accept/reject/alternative decision form and optional usefulness rating below it.
+- **History:** saved primary and alternative titles appear in individual cards,
+  with links back to their original comparisons and feedback.
+- **Phone layouts:** panels and cards stack vertically, form controls remain
+  usable, and wide comparison tables can scroll inside their own container.
+
+### A6 UI screenshots
+
+These screenshots were captured from the running Flask application at **1440px
+desktop** and **390px phone** widths. Long pages use selected regions so the
+relevant controls and evidence stay readable. The linked Steam account identifier
+is hidden in the presentation captures. The game titles, recommendation evidence,
+and saved history remain application output.
+
+**Home page — desktop**
+
+![GameScope desktop home page showing the discovery sidebar, welcome panel, game-art collection board, and illustrated note cards](static/images/a6-ui/a6-home-desktop.png)
+
+| Screenshot | View | What it demonstrates |
+|---|---|---|
+| [Home — desktop](static/images/a6-ui/a6-home-desktop.png) | 1440px | Overall visual direction, original artwork, sidebar, and collection board |
+| [Home — phone](static/images/a6-ui/a6-home-mobile.png) | 390px | Compact navigation and vertically arranged welcome and discovery panels |
+| [Play Next — desktop](static/images/a6-ui/a6-planner-desktop.png) | 1440px | Connected-account panel, style signals, and the start of the plan builder |
+| [Play Next — phone](static/images/a6-ui/a6-planner-mobile.png) | 390px | Stacked account and style panels on a narrow screen |
+| [Plan controls — phone](static/images/a6-ui/a6-planner-mobile-controls.png) | 390px | Category, discovery path, avoidance chips, and generation controls |
+| [Recommendation detail — desktop](static/images/a6-ui/a6-planner-desktop-cards.png) | 1440px | Game artwork, confidence, source labels, explanation, and Steam actions |
+| [Recommendation detail — phone](static/images/a6-ui/a6-planner-mobile-cards.png) | 390px | Recommendation content and evidence in a single-column layout |
+| [Comparison and feedback](static/images/a6-ui/a6-comparison-feedback.png) | 1440px | Option comparison, decision choices, usefulness rating, and comments |
+| [Comparison — remaining columns](static/images/a6-ui/a6-comparison-details.png) | 1440px | The same table scrolled horizontally to show reviews, price, ownership, and confidence |
+| [Recommendation history](static/images/a6-ui/a6-history-desktop.png) | 1440px | Saved game titles, alternatives, strategy versions, and plan links |
+
+<details>
+<summary>View Play Next and decision-support screenshots</summary>
+
+**Play Next overview**
+
+![Play Next desktop overview with separate account and style panels above the plan builder](static/images/a6-ui/a6-planner-desktop.png)
+
+**Recommendation detail**
+
+![Recommendation card with game artwork, confidence, sourced category labels, reasoning, and actions](static/images/a6-ui/a6-planner-desktop-cards.png)
+
+**Comparison and feedback**
+
+![Game comparison table and decision feedback form in the community-inspired theme](static/images/a6-ui/a6-comparison-feedback.png)
+
+The comparison can scroll horizontally when long game titles make the table
+wider than its panel. This second view shows the remaining columns:
+
+![Horizontally scrolled comparison showing review counts, quoted prices, ownership, and confidence](static/images/a6-ui/a6-comparison-details.png)
+
+**Saved recommendation history**
+
+![Recommendation history with saved game titles and links to earlier plans](static/images/a6-ui/a6-history-desktop.png)
+
+</details>
+
+<details>
+<summary>View phone screenshots</summary>
+
+**Home**
+
+<img src="static/images/a6-ui/a6-home-mobile.png" alt="Phone home page with compact navigation and stacked discovery panels" width="300">
+
+**Plan controls**
+
+<img src="static/images/a6-ui/a6-planner-mobile-controls.png" alt="Phone plan builder showing category and avoidance controls" width="300">
+
+**Recommendation detail**
+
+<img src="static/images/a6-ui/a6-planner-mobile-cards.png" alt="Phone recommendation detail with game artwork and evidence" width="300">
+
+</details>
+
+### Implementation and usability checks
+
+The shared theme lives in `static/community.css`, layered over
+`static/style.css`. `templates/base.html` supplies the shared navigation and
+footer. Original SVG assets are `gamescope-community.svg`, `community-icons.svg`,
+and `community-doodles.svg` in `static/images/`. GameScope's recommendation rules
+and historical plans are preserved by the visual update.
+
+The read-only `/game-artwork/<appid>` helper resolves Steam's current artwork URL,
+including newer hashed asset paths. It permits HTTPS Steam CDN images and uses
+the original illustrated fallback when artwork is unavailable. Successful lookups
+cache for one day; failed lookups cache for five minutes in a bounded in-process
+cache.
+
+Browser checks cover Home and Play Next at desktop and phone widths, including
+horizontal overflow and artwork loading. The UI also includes a skip link,
+visible keyboard-focus states, reduced-motion support, and distinct confidence
+labels. The latest automated application check passed **71 tests**, including
+artwork URL validation, caching, and service-failure handling.
+
+## A6 Decision Support
+
+### Steer away from familiar styles (A6-v4)
+
+Choose **Step outside my usual styles** to use play history as a reference for
+distance rather than similarity. The existing strict exclusion of usual categories
+still applies. The new **Categories to steer away from** checkboxes let the user
+explicitly exclude Action, Adventure, RPG, or any supported category, even if it
+falls below the automatically inferred usual-style threshold. Every primary and
+alternative must avoid those categories, including mixed-genre games and category
+knowledge combined across Steam and chart rows. Required categories remain strict;
+an explicit required/avoided conflict produces a readable notice.
+
+For broad exploration, leave Required category unset. Explicit avoidance can also
+supply the reference without a Steam import. With neither history nor explicit
+avoidance, the app explains that it cannot determine what to steer away from.
+
+Eligible discovery candidates are ranked by a documented category-distance
+heuristic with three broad design families:
+
+- Action, Adventure, RPG, Horror, Platformer, Roguelike
+- Puzzle, Strategy, Simulation, Casual
+- Racing, Sports
+
+Same-category similarity is 1, different categories in the same family have
+similarity .5, and categories in different families have similarity 0. Distance
+is `1 - max(similarity(candidate_category, reference) × reference_weight)` across
+all resolved candidate categories and reference styles. Reference weights use the
+normalized play-history affinities, with explicit exclusions and usual categories
+assigned weight 1. Ranking awards 65 points for distance, 25 for approval and 10
+for review support. Thus an Action/Adventure/RPG profile tends to surface more
+distant categories such as Puzzle, Strategy, or Simulation rather than another
+nearby action-oriented category. These families and weights are design choices,
+not learned evidence of literal opposites, pace, mood, difficulty, or enjoyment.
+
+Random selection remains weighted and runs only after strict filters. Discovery
+alternatives prefer different displayed categories when available. Games already
+shown anywhere in the profile's history remain excluded by default; the history
+opt-in resets to unchecked on each new form. No small-pool fallback reintroduces
+a blocked or previously recommended game. Individual distance scores, explanations,
+explicit exclusions and evidence are saved with strategy version **A6-v4**. Earlier
+plans remain immutable historical snapshots.
+
+### Strict categories and non-repeating discovery (A6-v3)
+
+Selected categories are now eligibility requirements for the primary and every
+alternative. Choosing Roguelike requires a sourced Roguelike, Roguelite, Action
+Roguelike, Traditional Roguelike, Rogue-like/lite, or Roguelike Deckbuilder tag
+(or an equivalent exact genre label). Adventure, Action, or RPG alone never
+establish a roguelike. Original labels remain visible in each card's **Sourced
+genres and tags** with a category-evidence link; the app does not relabel games
+to make them pass a filter. Explicit compound tags can support both families,
+such as Puzzle Platformer → Puzzle and Platformer.
+
+Steam's app-details genres are broad. The exact App ID's public store page now
+supplies popular user-defined tags via a narrowly scoped HTML parser. Up to thirty
+tags are retained. Missing, age-gated, unavailable, or mismatched pages do not
+justify guessing a missing category. Each newly qualified Steam game can require
+a third request for its tags. Each generation can also upgrade up to eight existing
+positive cache entries missing tags, with at most four workers and a one-day retry
+interval for unsuccessful tag lookups. Review acquisition timestamps remain
+unchanged by tag enrichment. Steam 250's sourced primary tags remain valid backup
+category evidence; App ID deduplication prevents duplicate cards across sources.
+
+**Explore a different style** is also strict. A usual style is a resolved gameplay
+category with at least half the relative weight of the strongest style in the
+sampled played games. Candidates with **any** recognized genre/tag overlapping
+those usual categories are rejected, even if another displayed category is new.
+The plan lists excluded usual styles. With no resolved Steam styles, the app
+explains that it cannot verify novelty. Selecting a usual category together with
+the different-style path produces a clear conflict notice; it does not override
+either requirement. Syncing Steam also reads tags for the five played-game samples,
+so a new sync improves the precision of the inferred style profile.
+
+Before ranking, A6-v3 excludes every game App ID shown as primary or alternative
+in **any saved plan for the current profile**, including plans older than ten runs.
+Empty plans do not consume games. Random selection only uses the remaining eligible
+candidates. It never fills an incomplete comparison with a prior recommendation
+or a game outside the selected category. One or two matches remain one or two;
+an exhausted pool shows an explanatory empty state. The optional **Include games
+from my recommendation history** checkbox explicitly allows repeats while keeping
+ownership and category/path requirements. Refreshing a saved page preserves its
+contents; the generate button requests a new set.
+Repeated submission of the same rendered form uses an idempotent generation ID,
+so a double click does not create a duplicate saved plan.
+
+Steam-wide retrieval prioritizes matching chart seeds even after the initial pool
+has grown and can supplement the cache when it has fewer than three *unseen,
+filter-matching* direct candidates. Final filtering always runs after retrieval.
+Both modes use 65 points for verified category fit/novelty, 25 for approval, and
+10 for review support; novelty is a strict gate rather than a small score bonus.
+Saved plans identify the **A6-v3** strategy. Earlier plans remain unchanged and show
+a notice that their original rules differ. The v1/v2 sections below document those
+historical strategies where they differ from v3.
+
+### Steam-wide discovery, varied plans, and named history (A6-v2)
+
+Play Next now defaults to **Steam-wide discovery**. This uses
+[Steam's GetAppList](https://partner.steamgames.com/doc/webapi/IStoreService#GetAppList)
+to index the broader game catalog rather than limiting discovery to Steam 250.
+It does not import Steam's personalized recommendation feed or access Steam's
+internal database. GameScope generates its own recommendations from public evidence.
+
+The catalog is paginated in batches of 50,000 with a bounded fetch budget (at most
+ten requests, stopping between requests after 25 seconds). A partial index is
+explicitly identified. The index is cached for 24 hours. Each new Steam-wide plan
+checks at most 16 randomly sampled, unowned games not successfully checked within
+seven days, using four workers. Each inspection has at most one store-data request
+and one review-summary request, with a six-second per-request timeout. The initial
+catalog load and scans may take longer than chart-only plans.
+
+While the directly verified pool has fewer than twelve entries, up to four of
+those sixteen checks can be seeded from an already-acquired chart. The remaining
+checks explore Steam's wider index. Seeds still undergo the same direct Steam
+metadata/review checks; explanations identify chart-seeded versus wider-catalog
+discoveries. This supplies initial options while the broader verified pool grows.
+
+GameScope's **own hidden-gem criteria** are released Windows games with **20–5,000
+reviews** and **at least 85% positive** reviews. These are discovery heuristics,
+not a Steam-certified hidden-gem label or proof of low sales/player counts. Review
+summaries request all languages, both recommendation types, all purchase sources,
+and Steam's off-topic filtering. The unrounded positive/total ratio determines
+eligibility; the display rounds approval to a whole percentage.
+
+Steam's public `store.steampowered.com/api/appdetails` endpoint supplies exact-App-ID
+titles, genres, release/platform flags, and US-region price quotes. This endpoint
+is **undocumented**, may change, and is isolated in
+`services/steam_discovery_service.py`. The documented
+[GetAppReviews endpoint](https://partner.steamgames.com/doc/webapi/IUserReviewsService#GetAppReviews)
+supplies approval/count evidence. Qualifying candidates and successful negative
+checks are cached for seven days. Transport failures are not cached as negative
+results. Candidates from expired checks are excluded until rechecked. Any eligible
+indexed game can enter the random scan, but this is not exhaustive evaluation of
+every game and not every click will find new qualifying games.
+
+The growing pool lives in additive `steam_catalog_indexes` and
+`steam_discovery_games` tables, separately from chart snapshots and manual records.
+They store public game data, not account identifiers. When fewer than three direct
+Steam candidates are available, the Steam 250 pool supplements them. The interface
+discloses this and each card preserves its own source, acquisition date and evidence
+link. Direct candidates are not described as Steam 250 ranked games. Multi-genre
+Steam candidates use the category best matching the selected style or play history.
+Select **Steam 250 hidden-gem chart** to use the previous source alone.
+
+New plans retain category/quality scoring, then vary selection among up to 30
+candidates within 20 points of the highest score. Draw weight is
+`max(1, score)^2 / (1 + 3 × appearances_in_last_ten_plans)`. If at least three of
+these candidates were absent from the last plan, that unseen subset is used.
+If fewer than three candidates are within that score range, the next-best options
+expand the pool to three (or all eligible options if fewer). Such options may have
+weaker personal fit; their scores/confidence are not inflated. The primary avoids
+the last primary when another eligible choice exists. Alternatives prefer the same
+pool and otherwise fill from the remaining ranking. Alternatives can repeat when
+the pool is small, and a single eligible candidate must repeat as primary;
+randomization never fabricates new evidence. Confidence still reflects evidence
+strength, not randomness. The strategy version is saved as **A6-v2**.
+
+**Recommendation history** (`/play-next/history`) lists primary and alternative
+game titles with dates, confidence, and strategy versions, twenty plans per page.
+The dashboard lists the latest ten. Opening a historical plan preserves the exact
+options originally shown; only generating a new plan reruns discovery/selection.
+History remains scoped to the current browser or verified Steam profile.
+
+The older `/appreviews/<appid>?json=1` endpoint is deprecated and now redirects
+to the store homepage in live checks. Both discovery and the Hidden Gems review
+panel now use `IUserReviewsService/GetAppReviews/v1/`, JSON service parameters,
+numeric filter enums, and the `response` envelope. This public review API does
+not need a publisher key. See Steam's
+[migration guide](https://partner.steamgames.com/doc/webapi/IUserReviewsService#migrating).
+
+**Decision problem:** Which lesser-known Steam game should I try next, and why?
+**Target user:** PC players looking beyond familiar popular games, including players
+who want recommendations connected to their Steam activity.
+
+Open **Play Next** (`/play-next`) from the navigation. The dedicated interface
+shows a primary recommendation, up to two alternatives, a comparison table,
+evidence, confidence explanations, an exploratory time plan, and a decision form.
+It uses public Steam evidence and/or acquired Steam 250 candidates; the fictional
+A1 collection is excluded.
+
+### Running and demonstrating A6
+
+```bash
+python -m pip install -r requirements.txt
+flask --app app init-db
+python app.py
+```
+
+`init-db` is additive: it creates missing A6 tables without resetting existing
+records. Do not run `reset-db` to upgrade. No existing table columns were added,
+so this update needs no column migration. Supported databases remain SQLite and MySQL.
+
+1. Open `http://127.0.0.1:5000/play-next`.
+2. Choose a candidate source, **Strategy**, **Stay close to my style**, and a
+   30-minute exploratory trial. Generate a plan. Steam-wide mode scans beyond
+   the chart; chart mode can use a bundled snapshot when both chart hosts fail.
+3. Inspect the primary choice and alternatives. Each identifies its selection
+   factors, chart evidence, known limitations, and confidence rules.
+4. Compare category, style fit, total ranking score, approval, review count,
+   source-quoted price, visible ownership, and confidence in the table.
+5. Accept, reject, select an alternative, or rate usefulness. Rating and comments
+   are optional for accept/reject/alternative decisions. Save and revisit the plan
+   to demonstrate persistence. Updating feedback replaces the current decision
+   for that plan rather than counting duplicate submissions as separate decisions.
+6. Inspect your plan-view count, decision count, rating count, and average
+   usefulness in **Your recent plans**. An unrated plan has no invented rating.
+
+### Link Steam and personalize from actual play
+
+Configure these server environment values in your uncommitted `.env`:
+
+```dotenv
+SECRET_KEY=<a-private-random-value-of-at-least-32-characters>
+STEAM_WEB_API_KEY=<your-server-side-Steam-Web-API-key>
+RAWG_API_KEY=<your-RAWG-key>
+PUBLIC_BASE_URL=http://127.0.0.1:5000
+```
+
+Generate a secret with `python -c 'import secrets; print(secrets.token_hex(32))'`.
+Obtain a server key through [Steam Web API registration](https://steamcommunity.com/dev/apikey).
+Restart Flask after editing `.env`. The browser origin must exactly match
+`PUBLIC_BASE_URL`: `localhost` and `127.0.0.1` are different origins. On a deployed
+site use its HTTPS origin, `FLASK_ENV=production`, and a private random secret.
+Steam linking is disabled until a sufficiently long non-placeholder secret is set.
+
+Choose **Sign in through Steam**. Steam authenticates the account on its own
+domain using [OpenID](https://steamcommunity.com/dev); GameScope verifies the
+assertion with Steam rather than trusting a submitted profile ID. Callback checks
+include fixed provider, claimed identity, signed fields, exact return URL, nonce
+age, browser state, and a database-backed one-time login attempt. No password is
+collected. A returning verified Steam account restores its GameScope profile.
+
+After linking, choose **Sync Steam history**. The consent text explains that this
+imports visible owned games and recent/lifetime playtime, and sends at most five
+played titles to RAWG for genre enrichment. `GetOwnedGames` and
+`GetRecentlyPlayedGames` use the server key and the verified Steam ID through
+[IPlayerService](https://partner.steamgames.com/doc/webapi/IPlayerService).
+The user does not provide a personal API key. OpenID verifies identity; it does
+not grant access to private game details. Users must expose Game details and
+playtime for this import to work.
+
+The five highest-weight played games supply style signals. A game's weight is:
+
+```text
+0.70 × ln(1 + recent minutes) + 0.30 × ln(1 + lifetime minutes)
+```
+
+Recent minutes represent Steam's last-two-weeks activity, not a daily schedule.
+Weights are divided among each seed game's RAWG genres, summed by broad category,
+and normalized against the strongest category. The explicit category mapping is
+in `services/decision_support.py` (for example JRPG → RPG and RTS → Strategy).
+This mapping is a design heuristic, not verified equivalence of game mechanics.
+RAWG enrichment requires a normalized exact title match. This reduces unrelated
+matches but does not resolve same-name games or edition ambiguity by Steam ID.
+Unresolved genres are omitted and reported. No game styles are guessed from titles.
+
+Played games and their recent/lifetime hours appear as evidence alongside genre
+source links. The imported visible library excludes owned candidates from the
+plan. Without an import, ownership is explicitly unknown. Sync is user initiated;
+there is no background Steam polling. A failed/private-library sync clears the
+active import so new plans cannot silently use stale history. Previously saved
+plans remain historical snapshots until the user deletes them.
+
+**Disconnect and delete** removes the profile, imported history, saved plans,
+display telemetry, and decision feedback. Anonymous profiles are browser-session
+scoped; clearing browser cookies loses access to anonymous history. Linked profiles
+can be restored by verifying the same Steam account. POST actions use CSRF tokens,
+and saved plans/feedback are scoped to the current profile.
+
+### Decision Workflow Diagram
+
+```mermaid
+flowchart TD
+    A[Choose preferences or verify Steam account] --> B[Import visible play history]
+    A --> C[Retrieve acquired Steam 250 chart]
+    B --> D[Resolve up to five played-game genres with RAWG]
+    C --> E[Exclude visible owned games and rank candidates]
+    D --> E
+    E --> F[Generate evidence-based explanations and confidence]
+    F --> G[Save primary recommendation and up to two alternatives]
+    G --> H[Display comparison and record rendered options]
+    H --> I[Accept / Reject / Select alternative / Rate usefulness]
+    I --> J[Persist feedback and show evaluation counts]
+```
+
+### Explainability and alternatives
+
+Decision logic lives in `services/decision_support.py`, separately from acquisition
+in `services/decision_retrieval.py`, the existing A5 intelligence service, and Flask
+routes in `routes/decisions.py`. Explanations are deterministic statements assembled
+from retrieved fields and computed factors. A6 does not require or call an LLM.
+Consequently, AI downtime does not prevent generating, comparing, or selecting a plan.
+
+Style fit combines 60% stated-category match and 40% behavioral-category affinity
+when both are available; either supplies the entire fit when the other is absent.
+With neither, fit is zero and confidence is Low.
+
+| Path | Fit | Category novelty | Approval | Review support |
+|---|---:|---:|---:|---:|
+| Stay close to my style | 65 | 0 | 25 | 10 |
+| Explore a different style | 45 | 20 | 25 | 10 |
+
+Scores are weighted points out of 100. Approval uses the chart's percentage.
+Review support is `min(1, ln(1 + review_count) / ln(1001))`. Category novelty is
+`1 - behavioral affinity` and only contributes when Steam styles and a candidate
+category exist. The discovery path changes scoring emphasis; it does not claim
+to be a difficulty progression or an in-game walkthrough. Trial minutes do not
+alter rankings because session suitability is not supported by current evidence.
+
+A6-v1 saved plans used the highest-ranked candidate and the next two distinct
+candidates. New A6-v2 plans use the varied selection described above. Ranking ties
+break by chart rank, then Steam App ID. Fewer eligible candidates produce fewer
+alternatives with an explanation rather than fabricated options.
+
+### Confidence and limitations
+
+Confidence describes evidence strength, **not the probability of enjoyment**:
+
+- **High:** fit at least 60%, two supporting played games, history synced within
+  seven days, source evidence fetched within two days, valid approval, and at least 100 reviews.
+- **Medium:** fit at least 60%, known category, source evidence fetched within two days,
+  valid approval, and a positive review count, without all High conditions.
+- **Low:** the remaining cases, including unknown-date snapshots, missing rating
+  evidence, and unsupported personal fit. The suggestion remains usable with caveats.
+
+The latest chart has separate original-fetch and local-save timestamps. Cached
+acquisitions retain original fetch time; bundled snapshot acquisition time is
+unknown. Both decision UI and Hidden Gems distinguish snapshot data from live data.
+The decision engine only uses the latest acquired chart, so historical library
+rows that dropped out of the chart do not remain eligible through database search.
+Prices are historical source quotes without a guaranteed currency region or sale
+freshness; users verify current prices and availability on Steam.
+
+RAWG average playtime is not completion time or recommended session length. Steam
+playtime does not establish enjoyment, free time, personality, mood, or skill.
+The displayed time plan is an explicitly labeled user-chosen exploratory trial;
+save systems, pause support, difficulty progression, and optimal session length
+are unverified. A candidate has only one chart tag, and the five-game style sample
+may miss important preferences. Genre enrichment can add up to five external
+requests during sync; slow/unavailable sources produce unresolved-style notices.
+
+### User Feedback and Decision Telemetry
+
+Additive tables:
+
+| Table | Stored information |
+|---|---|
+| `catalog_snapshots` | Latest validated chart JSON, source mode, original fetch time if known, local save time |
+| `player_profiles` | Browser profile ID, optional verified Steam ID, imported visible library/history, sync time and notice |
+| `steam_login_attempts` | Random one-time authentication token, creation time, consumed status |
+| `decision_runs` | Profile, request preferences, strategy version, creation time, provenance, immutable options/evidence/confidence |
+| `decision_impressions` | Plan ID, render timestamp, displayed App IDs and confidence labels |
+| `decision_feedback` | Plan ID, accept/reject/alternative/rate action, selected App ID, optional 1–5 rating/comment, decision timestamp |
+
+Impressions record server-rendered plans, not proof that a person read the page.
+Feedback is one current decision per plan and can be updated. Missing feedback is
+not interpreted as rejection; comments and ratings are nullable. Old plans keep
+their original evidence and confidence after a chart refresh or history sync.
+Feedback is currently used for evaluation, not automatic reranking. Future tuning
+could compare acceptance, alternative selection, and usefulness across path and
+confidence groups. Such comparisons need enough observations and must account for
+exposure and selection bias. A chosen game does not establish that it was enjoyed.
+
+### Reliability
+
+- No Steam key, private details, missing playtime, missing RAWG key, or unresolved
+  styles: explain the limitation and allow manual style selection.
+- Recent-history API failure: explicitly fall back to lifetime-only evidence.
+- Chart host failures: mirror, then labeled bundled snapshot; no source: readable
+  error and retry. Refresh respects the existing 15-minute scraper cache.
+- Empty/fully owned chart: save an empty plan and show a clear empty state without
+  a broken comparison or feedback form.
+- Low confidence or missing evidence: display the limitations and available fields.
+- Database failure: rollback and return a readable 503 page; do not claim feedback
+  was saved. Invalid CSRF, feedback values, or option IDs are rejected.
+- A5 model failures still use local fallback; engine metadata now reflects the
+  actual path, supporting titles are checked against retrieved records, and local
+  fallback confidence is Low. Output shape validation does not prove factuality.
+
+### Evaluation
+
+Run `python -m pytest -q`. Tests use database configuration applied **before**
+SQLAlchemy initialization, preventing the normal development database from being
+used for test table creation/deletion. Cases cover behavioral ranking, owned-game
+exclusion, confidence degradation, alternatives/comparison rendering, immutable
+plans, optional feedback, validation, CSRF, profile isolation, private-history
+fallback, deletion, title mismatch, OpenID response verification, and callback replay.
+The tests use controlled service responses; they do not prove live account access.
+
+Use the Play Next metrics to evaluate actual interaction. Usefulness is the mean
+of submitted ratings only; report the rating count beside it. A manual evaluation
+should include a public account, a private account, no recent playtime, unknown
+genres, network failure, and a user selecting each decision type. Compare whether
+users report that explanations and alternatives help them decide. No user study
+or recommendation-quality result is claimed by this implementation. Live Steam
+sign-in/import requires configured keys, a running callback origin, and an account
+owner completing sign-in; these cannot be substituted by test fixtures.
 
 ## A5 Intelligence Generation Update
 
@@ -31,7 +567,8 @@ Validate Response and Persist Metadata
 Display Recommendation in the Search Page
 ```
 
-The AI component never invents new facts. It only works from the data already retrieved from the database.
+The AI component is instructed to use only retrieved database records. Validation
+checks structure and supporting titles, but cannot guarantee factual correctness.
 
 ### Prompt design
 
@@ -205,7 +742,8 @@ pages.
 ### Steam User Reviews endpoint
 
 - Documentation: [Steam User Reviews](https://partner.steamgames.com/doc/store/getreviews)
-- Endpoint: `GET https://store.steampowered.com/appreviews/<appid>?json=1`
+- Endpoint: `GET https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/`
+- Parameters: `input_json`, including App ID, language list, and numeric review/purchase/filter enums
 - Fields used: review description, positive/negative totals, written review,
   recommendation, playtime, helpful votes, comment count, and developer response
 - Purpose: add current, detailed player experiences to the selected result

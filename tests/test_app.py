@@ -19,12 +19,12 @@ SAMPLE_GEMS = [
 
 @pytest.fixture()
 def app():
-    flask_app = create_app("default")
-    flask_app.config.update(
-        TESTING=True,
-        RAWG_API_KEY="test-key",
-        SQLALCHEMY_DATABASE_URI="sqlite://",
-    )
+    flask_app = create_app("default", {
+        "TESTING": True,
+        "RAWG_API_KEY": "test-key",
+        "OPENAI_API_KEY": None,
+        "SQLALCHEMY_DATABASE_URI": "sqlite://",
+    })
     with flask_app.app_context():
         db.create_all()
     return flask_app
@@ -240,8 +240,7 @@ def test_acquired_invalid_records_are_skipped(client, app, monkeypatch):
 def test_saved_record_survives_new_app_instance(tmp_path):
     database_path = tmp_path / "persistent.sqlite"
     database_uri = f"sqlite:///{database_path.as_posix()}"
-    first_app = create_app("default")
-    first_app.config.update(SQLALCHEMY_DATABASE_URI=database_uri)
+    first_app = create_app("default", {"SQLALCHEMY_DATABASE_URI": database_uri})
     with first_app.app_context():
         db.create_all()
         db.session.add(GameRecord(
@@ -252,8 +251,7 @@ def test_saved_record_survives_new_app_instance(tmp_path):
         ))
         db.session.commit()
 
-    second_app = create_app("default")
-    second_app.config.update(SQLALCHEMY_DATABASE_URI=database_uri)
+    second_app = create_app("default", {"SQLALCHEMY_DATABASE_URI": database_uri})
     with second_app.app_context():
         record = GameRecord.query.one()
         assert record.title == "Persistent Entry"

@@ -3,25 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#78bd43">
     <title>{% block title %}GameScope{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='community.css', v='1') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/gamescope-community.svg') }}" type="image/svg+xml">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
-        <nav class="navbar" aria-label="Main navigation">
+        <nav class="navbar" aria-label="Site header">
             <a class="brand" href="{{ url_for('index') }}">
-                <img src="{{ url_for('static', filename='images/gamescope-logo.svg') }}" alt="" width="42" height="42">
-                <span>GameScope</span>
+                <img src="{{ url_for('static', filename='images/gamescope-community.svg') }}" alt="" width="46" height="46">
+                <span>GameScope<span class="brand-caption">a little more play</span></span>
             </a>
-            <div class="nav-links">
-                <a href="{{ url_for('index') }}">Home</a>
-                <a href="{{ url_for('explore') }}">Local Collection</a>
-                <a href="{{ url_for('hidden_gems') }}">Hidden Gems</a>
-                <a href="{{ url_for('search') }}">Search Database</a>
-                <a href="{{ url_for('library') }}">Saved Games</a>
+            <div class="header-actions">
+                <span class="header-note">good games. happy discoveries.</span>
+                <a class="header-history" href="{{ url_for('decisions.history') }}"><svg aria-hidden="true"><use href="{{ url_for('static', filename='images/community-icons.svg') }}#history"></use></svg><span>Your plans</span></a>
             </div>
         </nav>
     </header>
+    <div class="app-shell">
+        <aside class="community-sidebar" aria-label="GameScope navigation">
+            <p class="sidebar-label">A place to discover</p>
+            <nav class="community-nav" aria-label="Main navigation">
+                {% for endpoint, label, icon in [('index', 'Welcome home', 'home'), ('decisions.dashboard', 'Play Next', 'controller'), ('hidden_gems', 'Hidden Gems', 'spark'), ('explore', 'Local Collection', 'grid'), ('search', 'Search Database', 'search'), ('library', 'Saved Games', 'library')] %}
+                {% set active = request.endpoint == endpoint or (endpoint == 'decisions.dashboard' and request.endpoint and request.endpoint.startswith('decisions.')) or (endpoint == 'library' and request.endpoint in ['create_record', 'edit_record', 'delete_record']) or (endpoint == 'search' and request.endpoint in ['search_history', 'search_intelligence']) %}
+                <a href="{{ url_for(endpoint) }}" class="community-nav-link{% if active %} is-active{% endif %}"{% if active %} aria-current="page"{% endif %}>
+                    <span class="nav-icon"><svg aria-hidden="true"><use href="{{ url_for('static', filename='images/community-icons.svg') }}#{{ icon }}"></use></svg></span><span>{{ label }}</span>{% if active %}<span class="nav-active-dot" aria-hidden="true"></span>{% endif %}
+                </a>
+                {% endfor %}
+            </nav>
+            <div class="sidebar-note">
+                <span class="note-spark" aria-hidden="true">✧</span>
+                <p>Your next favorite<br>could be a little<br><strong>less obvious.</strong></p>
+                <a href="{{ url_for('decisions.dashboard') }}">Let's find it <span aria-hidden="true">↗</span></a>
+            </div>
+            <p class="sidebar-signoff">Made for curious players.</p>
+        </aside>
+        <main id="main-content">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="flash-stack" role="status" aria-live="polite">
@@ -31,9 +51,12 @@
     </div>
     {% endif %}
     {% endwith %}
-    <main>{% block content %}{% endblock %}</main>
+    {% block content %}{% endblock %}
+        </main>
+    </div>
     <footer class="site-footer">
-        <p>&copy; 2026 Yousef Malik | GameScope | IT401</p>
+        <p><strong>GameScope</strong> <span aria-hidden="true">✳</span> Small discoveries. Great game nights.</p>
+        <p>&copy; 2026 Yousef Malik · IT401</p>
     </footer>
 </body>
 </html>

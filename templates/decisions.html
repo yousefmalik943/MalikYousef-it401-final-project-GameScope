@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Play Next | GameScope{% endblock %}
+{% block content %}
+<section class="explore-page decision-page">
+    <div class="page-heading">
+        <p class="eyebrow">Your little discovery space</p>
+        <h1>Less searching.<br>More playing.</h1>
+        <p>Find hidden gems connected to the games you play. Discover different options each time, compare the evidence, and revisit every saved plan.</p>
+    </div>
+    <nav class="planner-steps" aria-label="Build your play plan"><a href="#steam-heading"><span>1</span> Bring your taste</a><span aria-hidden="true">···</span><a href="#plan-builder"><span>2</span> Pick your path</a><span aria-hidden="true">···</span><a href="{{ '#comparison' if options else '#plan-builder' }}"><span>3</span> Find your favorite</a></nav>
+
+    <section class="source-panel steam-connection" aria-labelledby="steam-heading">
+        <div>
+            <p class="source-label">Your play history</p>
+            <h2 id="steam-heading">{{ 'Steam connected' if player.steam_id else 'Bring your Steam taste' }}</h2>
+            {% if player.steam_id %}
+            <p>Verified account <a href="https://steamcommunity.com/profiles/{{ player.steam_id }}" target="_blank" rel="noopener">{{ player.steam_id }}</a>.</p>
+            <p>{{ 'Last synced ' ~ player.synced_at.strftime('%Y-%m-%d %H:%M UTC') if player.synced_at else 'No history imported yet.' }}</p>
+            {% if player.sync_note %}<p class="source-notice">{{ player.sync_note }}</p>{% endif %}
+            <form method="post" action="{{ url_for('decisions.sync') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <p>Sync imports your visible library and recent/lifetime playtime. Up to five played titles are sent to RAWG to resolve genres, and their public Steam tags are read by App ID. This data stays in GameScope until you clear it.</p>
+                <button class="filter-button" type="submit">Sync Steam history</button>
+            </form>
+            {% else %}
+            <p>Verify your account on Steam, then import visible games and playtime. GameScope never asks for your Steam password.</p>
+            <form method="post" action="{{ url_for('decisions.link') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="steam-signin" type="submit"><img src="https://community.fastly.steamstatic.com/public/images/signinthroughsteam/sits_01.png" width="180" height="35" alt="Sign in through Steam"></button>
+            </form>
+            <p class="source-attribution">You can also start with a preferred style below. Private game details cannot be imported.</p>
+            {% endif %}
+        </div>
+        <aside class="taste-panel" aria-label="Resolved play styles">
+            <h3>Your style signals</h3>
+            {% if affinity %}
+            <ol class="affinity-list">
+                {% for name, weight in affinity[:4] %}
+                <li><span>{{ 'RPG' if name == 'rpg' else name|title }}</span><meter min="0" max="1" value="{{ weight }}">{{ (weight * 100)|round|int }}%</meter></li>
+                {% endfor %}
+            </ol>
+            <p>Relative category weights from up to five played games. Recent play gets 70% of the weight; lifetime play gets 30%, after log scaling.</p>
+            {% else %}
+            <p>No resolved Steam styles yet. Choose a style to get started.</p>
+            {% endif %}
+            <p>Playtime indicates activity, not enjoyment. No personality or mood is inferred.</p>
+            {% if player.steam_id %}<p class="source-attribution">Genre enrichment: <a href="https://rawg.io" target="_blank" rel="noopener">RAWG</a>, matched by normalized title; editions can remain ambiguous.</p>{% endif %}
+        </aside>
+    </section>
+
+    <h2 class="decision-section-heading" id="plan-builder">Build your play plan <span class="heading-doodle" aria-hidden="true">✧</span></h2>
+    <form class="filter-form decision-preferences" method="post" action="{{ url_for('decisions.generate') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="generation_id" value="{{ generation_id }}">
+        <div class="filter-field">
+            <label for="catalog-source">Where to discover games</label>
+            <select id="catalog-source" name="catalog_source">
+                <option value="steam" {% if context.get('catalog_source', 'steam') == 'steam' %}selected{% endif %}>Steam-wide discovery</option>
+                <option value="chart" {% if context.get('catalog_source') == 'chart' %}selected{% endif %}>Steam 250 hidden-gem chart</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="preferred-style">Required category (optional)</label>
+            <select id="preferred-style" name="style">
+                <option value="">No required category — follow my discovery path</option>
+                {% for style in styles %}<option value="{{ style }}" {% if context.get('style') == style %}selected{% endif %}>{{ 'Roguelike / roguelite' if style == 'Roguelike' else style }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="play-path">Discovery path</label>
+            <select id="play-path" name="path">
+                <option value="familiar" {% if context.get('path') != 'discovery' %}selected{% endif %}>Stay close to my style</option>
+                <option value="discovery" {% if context.get('path') == 'discovery' %}selected{% endif %}>Step outside my usual styles</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="trial-minutes">Time for an exploratory trial</label>
+            <select id="trial-minutes" name="minutes">
+                {% for value in [20, 30, 60, 120] %}<option value="{{ value }}" {% if context.get('minutes', 30) == value %}selected{% endif %}>{{ value }} minutes</option>{% endfor %}
+            </select>
+        </div>
+        <fieldset class="avoid-style-fieldset"><legend>Categories to steer away from (optional)</legend>
+            <p>Choose Action, Adventure, and RPG to exclude games with those sourced genres or tags. Step outside my usual styles also automatically excludes your usual Steam categories{% if usual %}: <strong>{{ usual|join(', ') }}</strong>{% endif %}. Leave Required category unset for broad exploration.</p>
+            <div class="avoid-style-options">{% for style in styles %}<label><input type="checkbox" name="avoid_styles" value="{{ style }}" {% if style in context.get('avoid_styles', []) %}checked{% endif %}> {{ style }}</label>{% endfor %}</div>
+        </fieldset>
+        <div class="filter-actions"><label><input type="checkbox" name="allow_repeats" value="1"> Include games from my recommendation history for this request</label></div>
+        <div class="filter-actions"><button class="filter-button" type="submit">Find my next hidden gem</button></div>
+    </form>
+    <details class="discovery-help"><summary>A little guide to your discovery plan</summary>
+    <p class="source-attribution">Steam-wide discovery checks a random sample of the broader Steam game catalog each run. GameScope’s criteria: released Windows games with 20–5,000 reviews and at least 85% positive feedback. It is a growing sample, not Steam’s own personalized recommendation feed.</p>
+    <p class="source-attribution">Your selected category is required for every option. Roguelike includes sourced roguelite and action-roguelike tags; Adventure alone does not qualify. Different-style discovery excludes any game overlapping your usual resolved categories. Previously recommended games are excluded unless you check the history box. If matches run out, fewer results are shown.</p>
+    <p class="source-attribution">Step outside my usual styles favors categories farther from your play history and avoided categories, with a preference for different categories among the alternatives. Genre distance is a transparent design rule, not proof of opposite gameplay or a particular mood. Results remain randomized and exclude previously recommended games by default.</p>
+    <p class="source-attribution">Choose Find my next hidden gem to generate fresh results. Refreshing the browser reopens the saved plan. The first Steam-wide scan can take longer while the catalog loads.</p>
+    <p class="source-attribution">Trial time is your planned time budget, not a prediction of game length or session suitability. Save/pause behavior is unverified. No Steam history means no ownership check.</p>
+    </details>
+
+    {% if run %}
+    <div class="results-heading">
+        <div><h2>Your play plan</h2><p>Created {{ run.created_at.strftime('%Y-%m-%d %H:%M UTC') }} · {{ context.get('engine') }}</p></div>
+        <a class="clear-link" href="#comparison">Compare options ↓</a>
+    </div>
+    {% if run.strategy_version != 'A6-v4' %}<p class="source-notice">This historical plan uses earlier recommendation rules. Generate a new plan to apply category-distance discovery and the current exclusions.</p>{% endif %}
+    {% if context.get('excluded_usual_styles') %}<p class="source-notice">Different-style filter excludes games with any of these usual categories: {{ context.excluded_usual_styles|join(', ') }}. Usual categories have at least half the weight of your strongest resolved play style.</p>{% endif %}
+    {% if context.get('avoid_styles') %}<p class="source-notice">You explicitly chose to avoid: {{ context.avoid_styles|join(', ') }}. These exclusions apply to every option, including games with mixed genres.</p>{% endif %}
+    {% if context.get('previously_shown_excluded') %}<p>{{ context.previously_shown_excluded }} distinct previously recommended games excluded from this plan.</p>{% endif %}
+    <p class="source-notice">Discovery source: {{ context.get('source_mode', 'unknown') }} · Catalog/chart fetched: {{ context.get('fetched_at') or 'unknown — saved snapshot' }}. Each card identifies its own evidence and fetch time. Prices are source quotes; confirm current price and availability on Steam. This saved plan does not update when you sync.</p>
+    {% if context.get('steam_indexed') %}<p>{{ '{:,}'.format(context.steam_indexed) }} Steam games indexed · {{ context.steam_scanned }} sampled this run{% if context.get('steam_seeded') %} (including {{ context.steam_seeded }} chart seeds rechecked on Steam){% endif %} · {{ context.steam_eligible }} cached candidates meet GameScope’s review criteria.</p>{% endif %}
+    {% for note in context.get('notes', []) %}<p class="source-notice">{{ note }}</p>{% endfor %}
+    {% if options %}
+    {% if options|length < 3 %}<p class="source-notice">Only {{ options|length }} fresh option(s) meet your filters. Category, different-style, and history exclusions were kept in place rather than filling the plan with unrelated or repeated games.</p>{% endif %}
+    <div class="decision-options">
+        {% for option in options %}
+        <article class="game-card decision-option {% if loop.first %}primary-option{% endif %}" aria-labelledby="option-{{ loop.index }}">
+            <div class="decision-cover"><img src="{{ url_for('game_artwork', app_id=option.app_id|int) }}" alt="" loading="lazy" onerror="this.hidden=true"><span class="cover-label">{{ 'Your next little discovery' if loop.first else 'Another path to try' }}</span></div>
+            <p class="source-label">{{ option.role }}</p>
+            <h3 id="option-{{ loop.index }}">{{ option.title }}</h3>
+            <p><span class="confidence confidence-{{ option.confidence|lower }}">{{ option.confidence }} confidence</span> · {{ option.tag }}</p>
+            <p>{{ option.selection_reason }}</p>
+            <p class="source-attribution">Evidence: {{ 'Steam Store and reviews' if option.source.source_mode == 'steam' else 'Steam 250 (' ~ option.source.source_mode ~ ')' }} · fetched {{ option.source.fetched_at or 'date unknown' }}.{% if option.get('seen_in_recent_plans') %} Appeared in {{ option.seen_in_recent_plans }} of your last ten plans.{% endif %}</p>
+            {% if option.get('categories') %}<p><strong>Sourced genres and tags:</strong> {{ option.categories|join(', ') }}.{% if option.get('category_source') %} <a href="{{ option.category_source }}" target="_blank" rel="noopener">Category evidence</a>{% endif %}</p>{% endif %}
+            {% if option.get('category_evidence') %}<details><summary>Sources for category labels</summary><ul>{% for evidence in option.category_evidence %}<li>{{ evidence.label }}{% if evidence.url %} — <a href="{{ evidence.url }}" target="_blank" rel="noopener">source</a>{% endif %}</li>{% endfor %}</ul></details>{% endif %}
+            <h4>Why this recommendation</h4>
+            <ul>{% for factor in option.factors %}<li>{{ factor }}</li>{% endfor %}</ul>
+            {% if option.history_evidence %}
+            <h4>From your play history</h4>
+            <ul>{% for item in option.history_evidence %}<li><a href="https://store.steampowered.com/app/{{ item.app_id }}/" target="_blank" rel="noopener">{{ item.title }}</a>: {{ item.recent_hours }} h in the last two weeks; {{ item.lifetime_hours }} h lifetime. {% if item.genre_source %}<a href="{{ item.genre_source }}" target="_blank" rel="noopener">RAWG category evidence</a>.{% endif %} {% if item.get('tag_source') %}<a href="{{ item.tag_source }}" target="_blank" rel="noopener">Steam tag evidence</a>.{% endif %}</li>{% endfor %}</ul>
+            {% endif %}
+            <h4>When to try it</h4>
+            <p>{{ option.timing }}</p>
+            <details><summary>Confidence and limitations</summary>
+                <p>{{ option.confidence_reason }}</p>
+                <p>Confidence is an evidence rule, not a measured probability that you will enjoy the game.</p>
+                {% if option.uncertainties %}<ul>{% for uncertainty in option.uncertainties %}<li>{{ uncertainty }}</li>{% endfor %}</ul>{% endif %}
+                <p>Steam 250 supplies one primary tag; Steam candidates may also have multiple broad genres and user-defined tags. Missing tags are not guessed. Category matching does not verify difficulty, specific mechanics, accessibility, or multiplayer features.</p>
+            </details>
+            <div class="card-actions"><a class="filter-button button-link" href="{{ option.steam_url }}" target="_blank" rel="noopener">Inspect on Steam</a><a class="clear-link" href="{{ option.source.chart_url }}" target="_blank" rel="noopener">{{ 'Review evidence' if option.source.source_mode == 'steam' else 'Chart evidence' }}</a></div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <section id="comparison" class="source-panel" aria-labelledby="comparison-heading">
+        <h2 id="comparison-heading">Compare your options</h2>
+        <p>All options use the same ranking rules. Familiar paths measure category similarity; Step outside my usual styles measures distance from your reference categories. Total score also includes approval and review support. These numbers are design scores, not probabilities of enjoyment.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Recommendation comparison">
+            <table class="search-history-table">
+                <caption class="visually-hidden">Primary recommendation and available alternatives</caption>
+                <thead><tr><th scope="col">Option</th><th scope="col">Category</th><th scope="col">Path fit / distance</th><th scope="col">Score / 100</th><th scope="col">Approval</th><th scope="col">Reviews</th><th scope="col">Quoted price</th><th scope="col">Ownership</th><th scope="col">Confidence</th></tr></thead>
+                <tbody>{% for option in options %}<tr><th scope="row">{{ option.title }}</th><td>{{ option.tag }}</td><td>{{ option.fit }} / 100</td><td>{{ option.score }}</td><td>{{ (option.approval|string ~ '%') if option.approval is not none else 'Unknown' }}</td><td>{{ '{:,}'.format(option.review_count) if option.review_count is not none else 'Unknown' }}</td><td>{{ option.price }}</td><td>{{ option.ownership }}</td><td>{{ option.confidence }}</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="feedback" class="source-panel" aria-labelledby="feedback-heading">
+        <h2 id="feedback-heading">What will you choose?</h2>
+        <p>Accept the primary choice, reject the plan, or choose an alternative. A usefulness rating and comment are optional when recording a decision.</p>
+        {% if feedback %}<p class="feedback-saved" role="status">Saved: {{ feedback.action }}{% if feedback.selected_app_id %} · {% for option in options if option.app_id == feedback.selected_app_id %}{{ option.title }}{% endfor %}{% endif %}{% if feedback.usefulness %} · usefulness {{ feedback.usefulness }}/5{% endif %} · {{ feedback.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>{% else %}<p>No decision recorded yet.</p>{% endif %}
+        <form method="post" action="{{ url_for('decisions.save_feedback', run_id=run.id) }}" class="decision-feedback">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <fieldset><legend>Your decision</legend>
+                <label><input type="radio" name="action" value="accept" required {% if feedback and feedback.action == 'accept' %}checked{% endif %}> Accept {{ options[0].title }}</label>
+                <label><input type="radio" name="action" value="reject" {% if feedback and feedback.action == 'reject' %}checked{% endif %}> Reject these suggestions</label>
+                {% if options|length > 1 %}<label><input type="radio" name="action" value="alternative" {% if feedback and feedback.action == 'alternative' %}checked{% endif %}> Choose an alternative</label>{% endif %}
+                <label><input type="radio" name="action" value="rate" {% if feedback and feedback.action == 'rate' %}checked{% endif %}> Rate usefulness only</label>
+            </fieldset>
+            {% if options|length > 1 %}<div class="filter-field"><label for="alternative-choice">Alternative (used only for “Choose an alternative”)</label><select name="selected_app_id" id="alternative-choice"><option value="">Select an alternative</option>{% for option in options[1:] %}<option value="{{ option.app_id }}" {% if feedback and feedback.selected_app_id == option.app_id %}selected{% endif %}>{{ option.title }}</option>{% endfor %}</select></div>{% endif %}
+            <div class="filter-field"><label for="usefulness">How useful was this plan? (optional)</label><select name="usefulness" id="usefulness"><option value="">Not rated</option>{% for value in [1, 2, 3, 4, 5] %}<option value="{{ value }}" {% if feedback and feedback.usefulness == value %}selected{% endif %}>{{ value }} — {{ ['Not useful', 'Slightly useful', 'Somewhat useful', 'Useful', 'Very useful'][value-1] }}</option>{% endfor %}</select></div>
+            <div class="filter-field"><label for="decision-comment">What worked or missed the mark? (optional)</label><textarea id="decision-comment" name="comment" maxlength="2000" rows="3">{{ feedback.comment or '' if feedback else '' }}</textarea></div>
+            <button class="filter-button" type="submit">{{ 'Update decision' if feedback else 'Save decision' }}</button>
+        </form>
+        <p class="source-attribution">Feedback is saved for evaluation. It does not yet change your ranking; we need outcome data before tuning the scoring rules.</p>
+    </section>
+    {% else %}
+    <div class="empty-results search-empty"><h2>No eligible recommendation available</h2><p>No fresh game currently meets all your category, different-style, ownership, and history filters. The app has kept those requirements in place. Generate again to scan more games, choose a different category/source, or explicitly include games from your history.</p></div>
+    {% endif %}
+    {% else %}
+    <div class="empty-results search-empty"><h2>A new route into hidden gems</h2><p>Choose a style or sync Steam, then generate a plan to see a primary recommendation and up to two alternatives with evidence.</p></div>
+    {% endif %}
+
+    <section class="source-panel" aria-labelledby="history-heading">
+        <h2 id="history-heading">Your recent plans</h2>
+        <p>{{ stats.views }} plan views · {{ stats.decisions }} recorded decisions · {{ stats.ratings }} usefulness ratings{% if stats.mean_rating is not none %} · average {{ stats.mean_rating }}/5{% else %} · no usefulness average yet{% endif %}.</p>
+        {% if history_cards %}<div class="plan-history-list">{% for item in history_cards %}<article><a class="clear-link" href="{{ url_for('decisions.dashboard', run=item.run.id) }}">{{ item.options[0].title if item.options else 'No eligible options' }}</a><p>{{ item.run.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') }} · {{ item.context.get('catalog_source', 'chart')|title }} · {{ item.run.strategy_version }}</p><p>Alternatives: {% for option in item.options[1:] %}{{ option.title }}{% if not loop.last %} · {% endif %}{% else %}none available{% endfor %}</p></article>{% endfor %}</div>{% else %}<p>No plans saved yet.</p>{% endif %}
+        <p><a class="clear-link" href="{{ url_for('decisions.history') }}">View all recommendation history →</a></p>
+        <details><summary>How the paths and variety work</summary><p>All options must pass your required category and avoid every explicitly excluded category. Step outside my usual styles also excludes usual Steam categories (at least half the weight of your strongest style). It needs resolved history or an explicit avoided category. Category distance uses three design families: Action/Adventure/RPG/Horror/Platformer/Roguelike; Puzzle/Strategy/Simulation/Casual; and Racing/Sports. Matching categories have similarity 1, different categories in the same family .5, and different families 0. Distance is 1 minus the strongest similarity to your weighted play styles or explicit exclusions. This is a broad heuristic, not a claim about opposite mechanics, pace, mood, or difficulty. Ranking uses 65 points for similarity or distance, 25 for approval, and 10 for review support. Discovery alternatives prefer different displayed categories when available. Random selection runs after all strict filters, without replacement. Prior recommendations stay excluded unless you explicitly include history for that request. An exhausted pool returns fewer or no matches.</p></details>
+        <div class="decision-tools">
+            <form method="post" action="{{ url_for('decisions.refresh') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="text-button" type="submit">Refresh chart evidence</button></form>
+            <form method="post" action="{{ url_for('decisions.clear') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="text-button delete-button" type="submit">Disconnect and delete my imported history, plans, and feedback</button></form>
+        </div>
+    </section>
+</section>
+{% endblock %}

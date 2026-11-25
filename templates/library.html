@@ -39,9 +39,10 @@
             <dl class="game-details">
                 <div><dt>Genre</dt><dd>{{ record.tag or 'Not supplied' }}</dd></div>
                 <div><dt>Steam App ID</dt><dd>{{ record.steam_app_id or 'Not supplied' }}</dd></div>
-                <div><dt>Retrieved</dt><dd>{{ record.retrieved_date.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
+                <div><dt>Record timestamp</dt><dd>{{ record.retrieved_date.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
                 <div><dt>Created</dt><dd>{{ record.created_date.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
             </dl>
+            <p class="source-attribution">This record timestamp does not establish source freshness. Play Next shows acquisition provenance for its chart evidence.</p>
             <p class="saved-source"><strong>Source:</strong> <a href="{{ record.source_url }}" target="_blank" rel="noopener">{{ record.source_url }}</a></p>
             <div class="card-actions">
                 <a class="clear-link" href="{{ url_for('edit_record', record_id=record.id) }}">Edit</a>

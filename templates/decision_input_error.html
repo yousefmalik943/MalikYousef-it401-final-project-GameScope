@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Check your selection | GameScope{% endblock %}
+{% block content %}
+<section class="explore-page empty-results">
+    <h1>Check your selection</h1>
+    <p>{{ message }}</p>
+    <a class="clear-link" href="{{ url_for('decisions.dashboard') }}">Return to Play Next</a>
+</section>
+{% endblock %}

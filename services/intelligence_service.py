@@ -18,6 +18,7 @@ class AiService:
         self.model = model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
         self.timeout = timeout
         self.base_url = "https://api.openai.com/v1"
+        self.engine_used = "local-deterministic-engine"
 
     def build_prompt(self, user_request, records):
         context_lines = []
@@ -139,7 +140,8 @@ class AiService:
             f"Across {len(ranked)} retrieved records, {primary.title} stands out as the leading match because it appears "
             f"earliest in the current result set and is supported by the other returned records."
         )
-        confidence = "High" if len(ranked) >= 2 else "Medium"
+        confidence = "Low"
+        recommendation += " This is a result-order suggestion; personal fit has not been measured."
         supporting_items = [record.title for record in ranked[:3]]
         return {
             "summary": summary,
@@ -149,6 +151,7 @@ class AiService:
         }
 
     def _generate_with_openai(self, user_request, records):
+        self.engine_used = "local-deterministic-engine"
         if not self.api_key:
             return self._fallback_generate(user_request, records)
 
@@ -175,12 +178,16 @@ class AiService:
             )
             response.raise_for_status()
             model_content = response.json()
-            return self._extract_json(model_content)
+            extracted = self.validate_generated_output(self._extract_json(model_content))
+            if not set(extracted["supporting_items"]).issubset({record.title for record in records}):
+                raise IntelligenceValidationError("Supporting titles must belong to the retrieved records.")
+            self.engine_used = self.model
+            return extracted
         except requests.Timeout:
             return self._fallback_generate(user_request, records)
         except requests.RequestException:
             return self._fallback_generate(user_request, records)
-        except IntelligenceValidationError:
+        except (IntelligenceValidationError, ValueError, KeyError, IndexError, TypeError):
             return self._fallback_generate(user_request, records)
 
     def generate(self, user_request, records, prompt_version="A5-v1"):
@@ -190,6 +197,6 @@ class AiService:
         generated = self._generate_with_openai(user_request, records)
         validated = self.validate_generated_output(generated)
         validated["prompt_version"] = prompt_version
-        validated["model_used"] = "openai" if self.api_key else "local-deterministic-engine"
+        validated["model_used"] = self.engine_used
         validated["generated_at"] = datetime.now(timezone.utc).isoformat()
         return validated

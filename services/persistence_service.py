@@ -1,14 +1,18 @@
 from datetime import datetime, timezone
 from urllib.parse import urlparse
+import json
 
-from models import GameRecord, db
+from models import CatalogSnapshot, GameRecord, db
 
 
-def persist_steam250_games(games):
+def persist_steam250_games(games, source_mode="unknown", fetched_at=None):
     saved_count = 0
+    valid_games = []
     retrieved_at = datetime.now(timezone.utc)
 
     for game in games:
+        if not isinstance(game, dict):
+            continue
         source_url = (game.get("steam_url") or "").strip()
         title = (game.get("title") or "").strip()
         parsed_url = urlparse(source_url)
@@ -26,6 +30,9 @@ def persist_steam250_games(games):
             or len(str(year)) > 20
             or len(str(game.get("score") or "")) > 20
             or len(str(game.get("price") or "")) > 40
+            or (game.get("approval") is not None and (type(game["approval"]) is not int or not 0 <= game["approval"] <= 100))
+            or (game.get("review_count") is not None and (type(game["review_count"]) is not int or game["review_count"] < 0))
+            or (game.get("rank") is not None and (type(game["rank"]) is not int or game["rank"] < 1))
         ):
             continue
 
@@ -45,7 +52,9 @@ def persist_steam250_games(games):
         )
         record.source = "Steam 250"
         record.source_url = source_url
-        record.retrieved_date = retrieved_at
+        # Preserve the original retrieval time for cached data. A snapshot's age is unknown.
+        if fetched_at is not None:
+            record.retrieved_date = fetched_at
         record.steam_app_id = app_id or None
         record.rank = game.get("rank")
         record.tag = tag
@@ -64,6 +73,15 @@ def persist_steam250_games(games):
             else None
         )
         saved_count += 1
+        valid_games.append(game)
 
+    snapshot = db.session.get(CatalogSnapshot, 1)
+    if snapshot is None:
+        snapshot = CatalogSnapshot(id=1)
+        db.session.add(snapshot)
+    snapshot.source_mode = source_mode
+    snapshot.fetched_at = fetched_at
+    snapshot.saved_at = retrieved_at
+    snapshot.games_json = json.dumps(valid_games, ensure_ascii=False)
     db.session.commit()
     return saved_count

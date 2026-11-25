@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Recommendation History | GameScope{% endblock %}
+{% block content %}
+<section class="explore-page decision-page">
+    <div class="page-heading"><p class="eyebrow">Your discovery trail</p><h1>Recommendation history</h1><p>Every plan keeps the games, comparisons, evidence, and confidence originally shown. Reopening a plan does not generate new recommendations.</p></div>
+    <p><a class="filter-button button-link" href="{{ url_for('decisions.dashboard') }}">Build a new plan</a></p>
+    <p>{{ total }} saved plan{{ '' if total == 1 else 's' }}</p>
+    {% if cards %}<div class="plan-history-list">{% for item in cards %}<article class="game-card">
+        <p class="source-label">{{ item.run.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') }} · {{ item.run.strategy_version }}</p>
+        <h2><a href="{{ url_for('decisions.dashboard', run=item.run.id) }}">{{ item.options[0].title if item.options else 'No eligible options' }}</a></h2>
+        <p>{{ item.context.get('catalog_source', 'chart')|title }} · {{ 'Explore a different style' if item.context.get('path') == 'discovery' else 'Stay close to my style' }}</p>
+        {% for option in item.options %}<p><strong>{{ option.role }}:</strong> {{ option.title }} · {{ option.confidence }} confidence · {{ option.tag }}</p>{% endfor %}
+        <a class="clear-link" href="{{ url_for('decisions.dashboard', run=item.run.id) }}">Open saved comparison and feedback →</a>
+    </article>{% endfor %}</div>
+    <nav class="search-pagination" aria-label="Recommendation history pages">{% if page > 1 %}<a href="{{ url_for('decisions.history', page=page-1) }}">← Previous</a>{% else %}<span></span>{% endif %}<span>Page {{ page }} of {{ pages }}</span>{% if page < pages %}<a href="{{ url_for('decisions.history', page=page+1) }}">Next →</a>{% endif %}</nav>
+    {% else %}<div class="empty-results"><h2>No plans saved yet</h2><p>Generate your first plan in Play Next to begin your discovery history.</p></div>{% endif %}
+</section>
+{% endblock %}

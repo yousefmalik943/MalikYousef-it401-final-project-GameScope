@@ -3,23 +3,44 @@
 {% block title %}GameScope | Intelligent Game Discovery{% endblock %}
 
 {% block content %}
-<section class="hero">
-    <div class="hero-content">
-        <img class="hero-logo" src="{{ url_for('static', filename='images/gamescope-logo.svg') }}" alt="GameScope logo">
-        <p class="eyebrow">Intelligent Game Discovery</p>
-        <h1>Discover beyond the obvious.</h1>
-        <p class="tagline">Find games that match what you actually enjoy.</p>
-        <p class="description">
-            GameScope helps PC gamers discover video games using game information,
-            player reviews, and personal preferences. It highlights meaningful
-            strengths, common concerns, and overlooked titles so users can
-            confidently decide what to play or purchase next.
-        </p>
-        <div class="hero-actions">
-            <a class="cta-button" href="{{ url_for('hidden_gems') }}">Discover Hidden Gems</a>
-            <a class="secondary-button" href="{{ url_for('explore') }}">Browse Local Collection</a>
+<section class="community-home">
+    <div class="home-welcome"><p><span class="welcome-sun" aria-hidden="true">☀</span> Hello, curious player.</p><span>A good day to find something new</span></div>
+    <section class="community-hero" aria-labelledby="home-title">
+        <div class="hero-content">
+            <p class="eyebrow">Small games. Big discoveries.</p>
+            <h1 id="home-title">Discover beyond the obvious.</h1>
+            <p class="description">A cozy little corner for your next favorite game. Follow your taste, take a new path, and find a hidden gem worth your time.</p>
+            <div class="hero-actions">
+                <a class="cta-button" href="{{ url_for('decisions.dashboard') }}">Find My Next Game <span aria-hidden="true">↗</span></a>
+                <a class="hero-browse" href="{{ url_for('hidden_gems') }}">Just looking around <span aria-hidden="true">→</span></a>
+            </div>
+            <p class="hero-footnote"><span aria-hidden="true">✧</span> Your taste. Your pace. A fresh discovery.</p>
         </div>
-        <p class="student-name">Created by Yousef Malik</p>
+        <div class="hero-playground" aria-hidden="true">
+            <span class="playground-bubble">What should we play?</span>
+            <img src="{{ url_for('static', filename='images/community-doodles.svg') }}" alt="" width="480" height="340">
+            <span class="playground-sticker">something a little<br><strong>unexpected!</strong></span>
+        </div>
+    </section>
+
+    <div class="home-board">
+        <section class="discovery-board" aria-labelledby="collection-heading">
+            <div class="board-heading"><div><p class="source-label">A few places to start</p><h2 id="collection-heading">Little gems, big personality.</h2></div><a href="{{ url_for('hidden_gems') }}">Explore all <span aria-hidden="true">→</span></a></div>
+            <div class="community-game-grid">
+                {% for game in featured_games %}
+                <a class="community-game-tile" href="{{ url_for('hidden_gems', query=game.title, appid=game.steam_app_id) }}">
+                    <div class="community-tile-art">{% if game.image %}<img src="{{ game.image }}" alt="" loading="lazy" onerror="this.hidden=true">{% endif %}<span class="tile-spark" aria-hidden="true">✧</span></div>
+                    <div class="community-tile-caption"><span class="tiny-game-icon" aria-hidden="true"><svg><use href="{{ url_for('static', filename='images/community-icons.svg') }}#controller"></use></svg></span><div><h3>{{ game.title }}</h3><p>{{ game.tag }}</p></div><span class="tile-arrow" aria-hidden="true">↗</span></div>
+                </a>
+                {% else %}<p>Find a new favorite in <a href="{{ url_for('hidden_gems') }}">Hidden Gems</a>.</p>{% endfor %}
+            </div>
+            <p class="board-attribution">A preview from our saved Steam 250 collection. <a href="{{ url_for('hidden_gems') }}">Check the latest chart</a>.</p>
+        </section>
+        <aside class="home-noticeboard" aria-labelledby="your-way-heading">
+            <div class="friendly-note"><span class="note-face" aria-hidden="true">:)</span><p>More puzzles?<br>Less action?<br><strong>You decide.</strong></p><span class="hand-spark" aria-hidden="true">✳</span></div>
+            <div class="your-way"><p class="source-label">Made for your kind of play</p><h2 id="your-way-heading">A plan that gets you.</h2><ol><li><span>01</span><div><strong>Bring your taste</strong><p>Link Steam or pick a category.</p></div></li><li><span>02</span><div><strong>Pick a different path</strong><p>Stay familiar or try the unexpected.</p></div></li><li><span>03</span><div><strong>Find your next favorite</strong><p>Compare the evidence, then play.</p></div></li></ol><a class="clear-link" href="{{ url_for('decisions.dashboard') }}">Make it your own <span aria-hidden="true">→</span></a></div>
+        </aside>
     </div>
+    <div class="home-bottom-note"><span aria-hidden="true">♡</span><p>A good game doesn't have to be the biggest game.</p><a href="{{ url_for('decisions.history') }}">Revisit your discoveries →</a></div>
 </section>
 {% endblock %}
